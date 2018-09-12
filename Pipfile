@@ -4,12 +4,18 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-black = "*"
-toml = "*"
+# defer to setup.py
+auto_version = {editable = true, path = "."}
 
 [dev-packages]
 "flake8" = "*"
 black = "*"
+green = "*"
+six = "*"
+coverage = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true

@@ -4,11 +4,15 @@ import ast
 
 from auto_version.config import AutoVersionConfig as config
 from auto_version.definitions import SemVerSigFig
+from auto_version import __version__
 
 
 def get_cli():
     """Load cli options"""
-    parser = argparse.ArgumentParser(description="controls version number of releases")
+    parser = argparse.ArgumentParser(
+        prog='auto_version',
+        description="auto version v%s: a tool to control version numbers" % __version__
+    )
     parser.add_argument(
         "--target",
         action="append",
@@ -46,6 +50,12 @@ def get_cli():
         default=False,
         help="Marks as a release build, which flags the build as released.",
     )
+    parser.add_argument(
+        "--version",
+        action="store_true",
+        default=False,
+        help="Prints the version of auto_version itself (self-version).",
+    )
     parser.add_argument("--config", help="Configuration file path.")
     parser.add_argument(
         "-v",
@@ -55,6 +65,10 @@ def get_cli():
         help="increase output verbosity. " "can be specified multiple times",
     )
     args, others = parser.parse_known_args()
+
+    if args.version:
+        print(__version__)
+        exit(0)
 
     # pull extra kwargs from commandline, e.g. TESTRUNNER_VERSION
     updates = {}
