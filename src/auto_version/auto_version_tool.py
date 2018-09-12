@@ -24,6 +24,7 @@ https://pypi.python.org/pypi/bumpversion
 https://github.com/warner/python-versioneer
 
 """
+import ast
 import glob
 import logging
 import os
@@ -41,6 +42,7 @@ import auto_version.definitions
 from auto_version.replacement_handler import ReplacementHandler
 
 from auto_version import semver
+from auto_version import __version__
 
 _LOG = logging.getLogger(__file__)
 
@@ -180,6 +182,7 @@ def get_dvcs_info():
 
 def main(
     set_to=None,
+    set_patch_count=None,
     release=None,
     bump=None,
     lock=None,
@@ -196,6 +199,7 @@ def main(
     Write out new version and any other requested variables
 
     :param set_to: explicitly set semver to this version string
+    :param set_patch_count: sets the patch number to the commit count
     :param release: marks with a production flag
                 just sets a single flag as per config
     :param bump: string indicating major/minor/patch
@@ -230,13 +234,23 @@ def main(
     updates.update(get_dvcs_info())
 
     if set_to:
+        _LOG.debug("setting version directly: %s", set_to)
         new_semver = auto_version.definitions.SemVer(*set_to.split("."))
         if not lock:
             warnings.warn(
                 "After setting version manually, does it need locking for a CI flow?",
                 UserWarning,
             )
+    elif set_patch_count:
+        _LOG.debug(
+            "auto-incrementing version, using commit count for patch: %s",
+            updates[Constants.COMMIT_COUNT_FIELD],
+        )
+        new_semver = semver.make_new_semver(
+            current_semver, triggers, patch=updates[Constants.COMMIT_COUNT_FIELD]
+        )
     else:
+        _LOG.debug("auto-incrementing version")
         new_semver = semver.make_new_semver(current_semver, triggers)
 
     updates.update(
@@ -265,6 +279,21 @@ def main(
     return current_semver, new_semver, native_updates
 
 
+def parse_other_args(others):
+    # pull extra kwargs from commandline, e.g. TESTRUNNER_VERSION
+    updates = {}
+    for kwargs in others:
+        try:
+            k, v = kwargs.split("=")
+            _LOG.debug("parsing extra replacement from command line: %r = %r", k, v)
+            updates[k.strip()] = ast.literal_eval(v.strip())
+        except Exception:
+            _LOG.exception(
+                "Failed to unpack additional parameter pair: %r (ignored)", kwargs
+            )
+    return updates
+
+
 def main_from_cli():
     """Main workflow.
 
@@ -274,11 +303,20 @@ def main_from_cli():
     Create a new version
     Write out new version and any other requested variables
     """
-    args, command_line_updates = get_cli()
+    args, others = get_cli()
+
+    if args.version:
+        print(__version__)
+        exit(0)
+
     log_level = logging.WARNING - 10 * args.verbosity
     logging.basicConfig(level=log_level, format="%(module)s %(levelname)8s %(message)s")
+
+    command_line_updates = parse_other_args(others)
+
     old, new, updates = main(
         set_to=args.set,
+        set_patch_count=args.set_patch_count,
         lock=args.lock,
         release=args.release,
         bump=args.bump,

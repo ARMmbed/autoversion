@@ -45,25 +45,25 @@ jobs:
           name: autoversion
           command: |
             . venv/bin/activate
-            auto_version --config=autoversion.toml --bump=patch --release
+            auto_version --config=autoversion.toml --set-patch-count --release
 
       - run:
           name: autoformat
           command: |
             . venv/bin/activate
-            black
+            black .
 
       - run:
           name: run tests
           command: |
             . venv/bin/activate
-            green
+            green .
 
       - run:
           name: run static analysis
           command: |
             . venv/bin/activate
-            flake8
+            flake8 .
 
       - store_artifacts:
           path: test-reports

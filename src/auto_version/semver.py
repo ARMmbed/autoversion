@@ -50,13 +50,18 @@ def get_current_semver(data):
     return versions.pop()
 
 
-def make_new_semver(current_semver, all_triggers):
+def make_new_semver(current_semver, all_triggers, **overrides):
     """Defines how to increment semver based on which significant figure is triggered"""
     new_semver = {}
     bumped = False
     for sig_fig in SemVerSigFig:  # iterate sig figs in order of significance
         value = getattr(current_semver, sig_fig)
-        if bumped:
+        override = overrides.get(sig_fig)
+        if override is not None:
+            new_semver[sig_fig] = override
+            if int(override) > int(value):
+                bumped = True
+        elif bumped:
             new_semver[sig_fig] = "0"
         elif sig_fig in all_triggers:
             new_semver[sig_fig] = str(int(value) + 1)

@@ -10,7 +10,7 @@ with open(os.path.join(repository_dir, "src", "auto_version", "__version__.py"))
     exec(fh.read())
 
 # support use of pipenv for managing requirements
-with open(os.path.join(repository_dir, 'requirements.txt')) as fh:
+with open(os.path.join(repository_dir, "requirements.txt")) as fh:
     requirements = fh.readlines()
 
 setup(

@@ -1,6 +1,5 @@
 """Load cli options"""
 import argparse
-import ast
 
 from auto_version.config import AutoVersionConfig as config
 from auto_version.definitions import SemVerSigFig
@@ -10,8 +9,8 @@ from auto_version import __version__
 def get_cli():
     """Load cli options"""
     parser = argparse.ArgumentParser(
-        prog='auto_version',
-        description="auto version v%s: a tool to control version numbers" % __version__
+        prog="auto_version",
+        description="auto version v%s: a tool to control version numbers" % __version__,
     )
     parser.add_argument(
         "--target",
@@ -39,6 +38,11 @@ def get_cli():
         help="Set the SemVer string. Use this locally to set the project version explicitly.",
     )
     parser.add_argument(
+        "--set-patch-count",
+        action="store_true",
+        help="Sets the patch number to the commit count.",
+    )
+    parser.add_argument(
         "--lock",
         action="store_true",
         help="Locks the SemVer string. "
@@ -64,17 +68,4 @@ def get_cli():
         default=0,
         help="increase output verbosity. " "can be specified multiple times",
     )
-    args, others = parser.parse_known_args()
-
-    if args.version:
-        print(__version__)
-        exit(0)
-
-    # pull extra kwargs from commandline, e.g. TESTRUNNER_VERSION
-    updates = {}
-    for kwargs in others:
-        k, v = kwargs.split("=")
-        print("unpacking %r = %r" % (k, v))
-        updates[k.strip()] = ast.literal_eval(v.strip())
-
-    return args, updates
+    return parser.parse_known_args()
