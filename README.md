@@ -1,7 +1,7 @@
 # auto_version
 Cross-language tool written in Python to automatically version projects using [SemVer](https://semver.org/)
 
-[![CircleCI](https://circleci.com/gh/ARMmbed/autoversion.svg?style=svg)](https://circleci.com/gh/ARMmbed/autoversion)
+[![CircleCI](https://circleci.com/gh/ARMmbed/autoversion.svg?style=svg&circle-token=dd9ec017be37f9b5f0a5b9a785c55c53fcd578c7)](https://circleci.com/gh/ARMmbed/autoversion)
 
 ```
 pipenv install https://github.com/ARMmbed/autoversion
@@ -38,18 +38,21 @@ optional arguments:
   -v, --verbosity       increase output verbosity. can be specified multiple
                         times
 ```
-## notes
 ### fundamentals
 The tool operates on any text files, but _find and replacing_ variables
 configured in the tool. This makes it cross-language compatible and easily
-extensible.
+extensible. New version numbers
+are set by finding the existing version in one of the target files, determining
+the new version number, and writing it back to the file.
 - `target` adds a file to the list of files containing variables to replace
 - `?=?` any extra commands to the tool are treated as additional `key=value` pairs
 to replace
+
 ### manual
 The tool can be used manually, locally, to manage version changes, e.g.
 - `set` to set the exact version
 - `bump` to increment part of the SemVer
+
 ### stateless
 In this mode, the version number is determined from the version control commit distance.
 Only `git` dvcs is supported.
@@ -60,19 +63,22 @@ Only `git` dvcs is supported.
   - patch: 6
   - 'dev' release
   - sub-patch: 789
+
 ### stateful
-In this mode, version state information is committed back into the repository.
-Typically this would occur on a successful release.
+In this mode, version state information is expected to be committed back into the repository.
+Typically this would occur on a successful release. `auto_version` does not manipulate
+the repository index - this is left to the project's CI tooling.
 - `release` is used for strictly production version strings (i.e. _not_ devmode)
 - `file-triggers` (aka `news`) will trigger a certain version bump based on the presence
 of other files. This is intended for use with newsfile release flows
 (e.g. [towncrier](https://pypi.org/project/towncrier/)).
+
 ### advanced
 Combining manual and automated versioning:
 - `lock`: when releasing through a CI flow, a naive stateful system would always increment,
 even when the developer wishes to `bump` or `set` the version locally.
 If a `lock` variable can be set (somewhere in the repo), the current version is maintained
-for exactly one iteration of a CI release. Whereever `auto_version` would have changed the
+for exactly one iteration of a CI release. On the next run, if `auto_version` would have changed the
 version number, it instead removes the lock, such that increments resume on the next iteration.
 - (config file) `VERSION_KEY_STRICT`: provides a version string that is always equivalent to
 a `release` version
@@ -85,7 +91,7 @@ a `release` version
 - `config` path to a configuration file in [toml format](https://github.com/toml-lang/toml).
 If the file does not exist, it will be created with defaults.
 
-## getting started
+## getting started steps
 1. install `auto_version`
 1. run `auto_version --config=desired/config/path`
 1. adjust the configuration as necessary. in particular, set `targets` to a list of
@@ -97,3 +103,12 @@ the currently detected version. You may need to readjust the config.
 1. run `auto_version --config=desired/config/path --bump=patch -vv` to try an initial
 version increment, and view details on the updates the tool has applied.
 Check your target files, and if they are as you'd expect then you're good to go.
+
+## contribution and notes
+- tests are, and should ideally remain, `unittest` compatible
+- regexes were found to be unreliable or even buggy for performing replacements,
+particularly where leading whitespace is present. To mitigate this, the tool:
+  - track start and end of non-whitespace on a given line
+  - attempt the replacement within only the non-whitespace content
+  - finally, substitute that replacement back into the line, retaining existing whitespace
+
