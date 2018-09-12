@@ -29,6 +29,7 @@ setup(
         console_scripts=[
             "auto_version = auto_version.auto_version_tool:main_from_cli",
             "auto-version = auto_version.auto_version_tool:main_from_cli",
+            "autoversion = auto_version.auto_version_tool:main_from_cli",
         ]
     ),
 )

@@ -39,17 +39,16 @@ class AutoVersionConfig(object):
         "__version__": Constants.VERSION_FIELD,
         "__strict_version__": Constants.VERSION_STRICT_FIELD,
         "PRODUCTION": Constants.RELEASE_FIELD,
-        "SDK_MAJOR": SemVerSigFig.major,
-        "SDK_MINOR": SemVerSigFig.minor,
-        "SDK_PATCH": SemVerSigFig.patch,
+        "MAJOR": SemVerSigFig.major,
+        "MINOR": SemVerSigFig.minor,
+        "PATCH": SemVerSigFig.patch,
         "VERSION_LOCK": Constants.VERSION_LOCK_FIELD,
         Constants.COMMIT_COUNT_FIELD: Constants.COMMIT_COUNT_FIELD,
         Constants.COMMIT_FIELD: Constants.COMMIT_FIELD,
     }
     _forward_aliases = {}  # autopopulated later - reverse mapping of the above
     targets = [
-        os.path.join("src", "mbed_cloud", "_version.py"),
-        os.path.join("src", "mbed_cloud", "_build_info.py"),
+        os.path.join("src", "_version.py"),
     ]
     regexers = {
         ".json": r"""^\s*[\"]?(?P<KEY>\w+)[\"]?\s*:[\t ]*[\"]?(?P<VALUE>[^\r\n\t\f\v\"',]+)[\"]?,?""",  # noqa
