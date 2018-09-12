@@ -8,6 +8,7 @@ https://pypi.python.org/pypi/bumpversion
 https://github.com/warner/python-versioneer
 https://pypi.org/project/autoversion/
 https://pypi.org/project/auto-version/
+https://github.com/javrasya/version-manager
 
 """
 import ast

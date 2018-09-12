@@ -4,7 +4,7 @@ Cross-language tool written in Python to automatically version projects using [S
 [![CircleCI](https://circleci.com/gh/ARMmbed/autoversion.svg?style=svg&circle-token=dd9ec017be37f9b5f0a5b9a785c55c53fcd578c7)](https://circleci.com/gh/ARMmbed/autoversion)
 
 ```
-pipenv install https://github.com/ARMmbed/autoversion
+pipenv install pyautoversion
 ```
 
 ## usage

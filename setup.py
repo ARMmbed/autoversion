@@ -16,7 +16,7 @@ with open(os.path.join(repository_dir, "requirements.txt")) as fh:
 setup(
     author="David Hyman",
     author_email="support@mbed.com",
-    name="auto_version",
+    name="pyautoversion",
     description="Tool for managing SemVer versioning of a project.",
     long_description="Cross-language tool written in Python for managing SemVer versioning of a project.",
     license="Apache 2.0",
