@@ -39,7 +39,7 @@ optional arguments:
                         times
 ```
 ### fundamentals
-The tool operates on any text files, but _find and replacing_ variables
+The tool operates on any text files, by _find and replacing_ variables
 configured in the tool. This makes it cross-language compatible and easily
 extensible. New version numbers
 are set by finding the existing version in one of the target files, determining
@@ -50,14 +50,15 @@ to replace
 
 ### manual
 The tool can be used manually, locally, to manage version changes, e.g.
-- `set` to set the exact version
-- `bump` to increment part of the SemVer
+- `set 4.5.6` to set the exact version to _4.5.6_
+- `bump minor` to increment part of the SemVer e.g. _4.5.6_ to _4.6.0_
 
 ### stateless
 In this mode, the version number is determined from the version control commit distance.
 Only `git` dvcs is supported.
-- `set-patch-count` will use the commit count for the patch number
-- the patch number can also be used in the _devmode template_ e.g. `4.5.6dev789`
+- `set-patch-count` will use the commit count (e.g. 789) for the patch number
+  - commit count is taken to be the count of ancestors of the head of the current branch
+- the patch number can also be substituted in the _devmode template_ e.g. `4.5.6dev789`
   - major: 4
   - minor: 5
   - patch: 6
@@ -106,9 +107,12 @@ Check your target files, and if they are as you'd expect then you're good to go.
 
 ## contribution and notes
 - tests are, and should ideally remain, `unittest` compatible
-- regexes were found to be unreliable or even buggy for performing replacements,
+- regexes alone were found to be unreliable or even buggy for performing replacements,
 particularly where leading whitespace is present. To mitigate this, the tool:
   - track start and end of non-whitespace on a given line
-  - attempt the replacement within only the non-whitespace content
+  - attempt the regex substitution within only the non-whitespace content
   - finally, substitute that replacement back into the line, retaining existing whitespace
-
+- in-line replacement was chosen over parsing/comprehending the file format
+ as many parsers lose comments and file structure in doing so, which would be
+ unacceptable for this project. It should leave the files exactly as found,
+ just with a different version number (or other explicitly designated variable).
