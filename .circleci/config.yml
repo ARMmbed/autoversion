@@ -75,7 +75,7 @@ jobs:
           name: install dependencies
           # TODO: consider using pipenv
           command: |
-            pip install pipenv setuptools twine<1.12
+            pip install pipenv setuptools twine==1.11
             pipenv install --dev .
 
       - save_cache:
