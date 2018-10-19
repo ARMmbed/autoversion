@@ -1,4 +1,4 @@
-# auto_version
+# Autoversion
 Cross-language tool written in Python to automatically version projects using [SemVer](https://semver.org/)
 
 [![CircleCI](https://circleci.com/gh/ARMmbed/autoversion.svg?style=svg&circle-token=dd9ec017be37f9b5f0a5b9a785c55c53fcd578c7)](https://circleci.com/gh/ARMmbed/autoversion)
@@ -7,7 +7,7 @@ Cross-language tool written in Python to automatically version projects using [S
 pipenv install pyautoversion
 ```
 
-## usage
+## Usage
 ```
 usage: auto_version [-h] [--target TARGET] [--bump {major,minor,patch}]
                     [--news] [--set SET] [--set-patch-count] [--lock]
@@ -38,7 +38,7 @@ optional arguments:
   -v, --verbosity       increase output verbosity. can be specified multiple
                         times
 ```
-### fundamentals
+### Fundamentals
 The tool operates on any text files, by _find and replacing_ variables
 configured in the tool. This makes it cross-language compatible and easily
 extensible. New version numbers
@@ -48,12 +48,12 @@ the new version number, and writing it back to the file.
 - `?=?` any extra commands to the tool are treated as additional `key=value` pairs
 to replace
 
-### manual
+### Manual
 The tool can be used manually, locally, to manage version changes, e.g.
 - `set 4.5.6` to set the exact version to _4.5.6_
 - `bump minor` to increment part of the SemVer e.g. _4.5.6_ to _4.6.0_
 
-### stateless
+### Stateless
 In this mode, the version number is determined from the version control commit distance.
 Only `git` dvcs is supported.
 - `set-patch-count` will use the commit count (e.g. 789) for the patch number
@@ -65,7 +65,7 @@ Only `git` dvcs is supported.
   - 'dev' release
   - sub-patch: 789
 
-### stateful
+### Stateful
 In this mode, version state information is expected to be committed back into the repository.
 Typically this would occur on a successful release. `auto_version` does not manipulate
 the repository index - this is left to the project's CI tooling.
@@ -74,7 +74,7 @@ the repository index - this is left to the project's CI tooling.
 of other files. This is intended for use with newsfile release flows
 (e.g. [towncrier](https://pypi.org/project/towncrier/)).
 
-### advanced
+### Advanced
 Combining manual and automated versioning:
 - `lock`: when releasing through a CI flow, a naive stateful system would always increment,
 even when the developer wishes to `bump` or `set` the version locally.
@@ -88,11 +88,11 @@ a `release` version
 - (config file) `trigger_patterns`: describes file triggers for use with `news`
 - (config file) `DEVMODE_TEMPLATE`: sets a template for _devmode_ releases
 
-### configuration
+### Configuration
 - `config` path to a configuration file in [toml format](https://github.com/toml-lang/toml).
 If the file does not exist, it will be created with defaults.
 
-## getting started steps
+## Getting started steps
 1. install `auto_version`
 1. run `auto_version --config=desired/config/path`
 1. adjust the configuration as necessary. in particular, set `targets` to a list of
@@ -105,7 +105,7 @@ the currently detected version. You may need to readjust the config.
 version increment, and view details on the updates the tool has applied.
 Check your target files, and if they are as you'd expect then you're good to go.
 
-## contribution and notes
+## Contribution and notes
 - tests are, and should ideally remain, `unittest` compatible
 - regexes alone were found to be unreliable or even buggy for performing replacements,
 particularly where leading whitespace is present. To mitigate this, the tool:
