@@ -42,11 +42,6 @@ jobs:
           key: v1-dependencies-{{ checksum "requirements.txt" }}
 
       - run:
-          name: autoversion
-          command: |
-            pipenv run auto_version --config=autoversion.toml --set-patch-count --release
-
-      - run:
           name: autoformat
           command: |
             pipenv run black src
@@ -70,6 +65,28 @@ jobs:
     working_directory: ~/repo
     steps:
       - checkout
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          # TODO: consider using pipenv
+          command: |
+            pip install pipenv
+            pipenv install --dev .
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: autoversion
+          command: |
+            pipenv run auto_version --config=autoversion.toml --set-patch-count --release
 
 workflows:
   version: 2
