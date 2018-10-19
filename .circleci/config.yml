@@ -80,7 +80,7 @@ workflows:
           type: approval
           filters:
             branches:
-              only: pypi
+              only: f/pypi
           requires:
             - build
       - release:
