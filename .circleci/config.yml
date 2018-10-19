@@ -67,26 +67,36 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
+          - v2-dependencies-{{ checksum "requirements.txt" }}
           # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+          - v2-dependencies-
 
       - run:
           name: install dependencies
           # TODO: consider using pipenv
           command: |
-            pip install pipenv
+            pip install pipenv setuptools twine<1.12
             pipenv install --dev .
 
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
+          key: v2-dependencies-{{ checksum "requirements.txt" }}
 
       - run:
           name: autoversion
           command: |
             pipenv run auto_version --config=autoversion.toml --set-patch-count --release
+
+      - run:
+          name: generate a release package
+          command: |
+            pipenv run python setup.py clean --all bdist_wheel --dist-dir release-dist
+
+      - run:
+          name: upload to pypi
+          command: |
+            pipenv run python -m twine upload release-dist/*
 
 workflows:
   version: 2
