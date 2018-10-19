@@ -64,3 +64,25 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+  release:
+    docker:
+      - image: circleci/python:3.7.0
+    working_directory: ~/repo
+    steps:
+      - checkout
+
+workflows:
+  version: 2
+  autoversion_workflow:
+    jobs:
+      - build
+      - release_gate:
+          type: approval
+          filters:
+            branches:
+              only: pypi
+          requires:
+            - build
+      - release:
+          requires:
+            - release_gate
