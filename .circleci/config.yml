@@ -42,11 +42,6 @@ jobs:
           key: v1-dependencies-{{ checksum "requirements.txt" }}
 
       - run:
-          name: autoversion
-          command: |
-            pipenv run auto_version --config=autoversion.toml --set-patch-count --release
-
-      - run:
           name: autoformat
           command: |
             pipenv run black src
@@ -64,3 +59,57 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+  release:
+    docker:
+      - image: circleci/python:3.7.0
+    working_directory: ~/repo
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+          - v2-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - v2-dependencies-
+
+      - run:
+          name: install dependencies
+          # TODO: consider using pipenv
+          command: |
+            sudo pip install -U pip pipenv setuptools
+            pipenv install --dev . twine==1.11
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v2-dependencies-{{ checksum "requirements.txt" }}
+
+      - run:
+          name: autoversion
+          command: |
+            pipenv run auto_version --config=autoversion.toml --set-patch-count --release
+
+      - run:
+          name: generate a release package
+          command: |
+            pipenv run python setup.py clean --all bdist_wheel --dist-dir release-dist
+
+      - run:
+          name: upload to pypi
+          command: |
+            pipenv run python -m twine upload release-dist/*
+
+workflows:
+  version: 2
+  autoversion_workflow:
+    jobs:
+      - build
+      - release_gate:
+          type: approval
+          filters:
+            branches:
+              only: f/pypi
+          requires:
+            - build
+      - release:
+          requires:
+            - release_gate
