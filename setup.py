@@ -14,7 +14,7 @@ with open(os.path.join(repository_dir, "requirements.txt")) as fh:
     requirements = fh.readlines()
 
 setup(
-    author="David Hyman",
+    author="David Hyman, Arm Mbed",
     author_email="support@mbed.com",
     name="pyautoversion",
     description="Tool for managing SemVer versioning of a project.",
