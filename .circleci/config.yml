@@ -107,7 +107,7 @@ workflows:
           type: approval
           filters:
             branches:
-              only: f/pypi
+              only: master
           requires:
             - build
       - release:
