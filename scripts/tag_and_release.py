@@ -63,7 +63,7 @@ def main():
     branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'])
     new_url = git_url_ssh_to_https(url.decode())
     subprocess.check_call(['git', 'remote', 'set-url', 'origin', new_url])
-    branch_spec = 'origin/%s' % str(branch_name)
+    branch_spec = 'origin/%s' % branch_name.decode('utf-8').strip()
     subprocess.check_call(['git', 'branch', '--set-upstream-to', branch_spec])
     print('Committing the changelog & version')
     subprocess.check_call(['git', 'add', 'src/auto_version/__version__.py'])
