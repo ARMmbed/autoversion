@@ -21,6 +21,7 @@ setup(
     long_description="Cross-language tool written in Python for managing SemVer versioning of a project.",
     license="Apache 2.0",
     version=__version__,
+    url="https://github.com/ARMmbed/autoversion",
     include_package_data=True,
     package_dir={"": "src"},
     packages=find_packages("src"),
