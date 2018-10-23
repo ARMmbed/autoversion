@@ -94,7 +94,7 @@ jobs:
 
       - run:
           name: Generate changelog
-          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run auto_version --config=scripts/auto_version.toml)
+          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run auto_version --config=scripts/autoversion.toml)
           working_directory: docs/news
 
       - run:
