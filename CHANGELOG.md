@@ -8,6 +8,14 @@ a list of versions that have been released on PyPI.
 
 [//]: # (begin_release_notes)
 
+1.0.24 (2018-10-23)
+===================
+
+### Bugfixes
+
+- Specified repository URL for PyPI (#2)
+
+
 1.0.23 (2018-10-23)
 ===================
 
