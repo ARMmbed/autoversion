@@ -25,13 +25,12 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
+          - v1-dependencies-{{ checksum "Pipfile" }}
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
 
       - run:
           name: install dependencies
-          # TODO: consider using pipenv
           command: |
             pip install pipenv
             pipenv install --dev .
@@ -39,7 +38,7 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
+          key: v1-dependencies-{{ checksum "Pipfile" }}
 
       - run:
           name: autoformat
@@ -49,7 +48,8 @@ jobs:
       - run:
           name: run tests
           command: |
-            pipenv run green src
+            pipenv run pytest --junitxml=test-reports/results.xml
+            pipenv run green -r src
 
       - run:
           name: run static analysis
@@ -71,7 +71,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-          - v2-dependencies-{{ checksum "requirements.txt" }}
+          - v2-dependencies-{{ checksum "Pipfile" }}
           # fallback to using the latest cache if no exact match is found
           - v2-dependencies-
 
@@ -85,29 +85,26 @@ jobs:
       - save_cache:
           paths:
             - ./venv
-          key: v2-dependencies-{{ checksum "requirements.txt" }}
+          key: v2-dependencies-{{ checksum "Pipfile" }}
 
       - run:
           name: autoversion
           command: |
-            pipenv run auto_version --config=autoversion.toml --release
+            pipenv run auto_version --config=scripts/autoversion.toml --release
 
       - run:
           name: Generate changelog
-          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run auto_version --config=auto_version.toml)
+          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run auto_version --config=scripts/auto_version.toml)
           working_directory: docs/news
 
       - run:
-          name: generate a release package
+          name: Tag and Release
           command: |
-            pipenv run python setup.py clean --all bdist_wheel --dist-dir release-dist
+            pipenv run python scripts/tag_and_release.py
 
-      - run:
-          name: upload to pypi
-          command: |
-            pipenv run python -m twine upload release-dist/*
-
-
+      - store_artifacts:
+          path: CHANGELOG.md
+          
 workflows:
   version: 2
   autoversion_workflow:
