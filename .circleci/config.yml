@@ -28,34 +28,28 @@ jobs:
           - v1-dependencies-{{ checksum "Pipfile" }}
           # fallback to using the latest cache if no exact match is found
           - v1-dependencies-
-
       - run:
           name: install dependencies
           command: |
             pip install pipenv
             pipenv install --dev .
-
       - save_cache:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "Pipfile" }}
-
       - run:
           name: autoformat
           command: |
             pipenv run black src
-
       - run:
           name: run tests
           command: |
             pipenv run pytest --junitxml=test-reports/results.xml
             pipenv run green -r src
-
       - run:
           name: run static analysis
           command: |
             pipenv run flake8 src
-
       - store_artifacts:
           path: test-reports
           destination: test-reports
@@ -74,36 +68,30 @@ jobs:
           - v2-dependencies-{{ checksum "Pipfile" }}
           # fallback to using the latest cache if no exact match is found
           - v2-dependencies-
-
       - run:
           name: install dependencies
           # TODO: consider using pipenv
           command: |
             sudo pip install -U pip pipenv setuptools
             pipenv install --dev . twine==1.11
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: v2-dependencies-{{ checksum "Pipfile" }}
-
       - run:
           name: autoversion
           command: |
-            pipenv run auto_version --config=scripts/autoversion.toml --release
-
+            pipenv run auto_version --config=scripts/autoversion.toml --release --news
       - run:
           name: Generate changelog
-          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run auto_version --config=scripts/autoversion.toml)
+          command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run python setup.py --version)
           working_directory: docs/news
-
       - run:
           name: Tag and Release
           command: |
             pipenv run python scripts/tag_and_release.py
-
       - store_artifacts:
           path: CHANGELOG.md
+      - save_cache:
+          paths:
+            - ./venv
+          key: v2-dependencies-{{ checksum "Pipfile" }}
           
 workflows:
   version: 2
