@@ -7,3 +7,10 @@ This news file contains a log of notable changes to `auto_version`. Please see [
 a list of versions that have been released on PyPI.
 
 [//]: # (begin_release_notes)
+
+1.0.23 (2018-10-23)
+===================
+
+### Bugfixes
+
+- Fix for package.json regex (#1)
