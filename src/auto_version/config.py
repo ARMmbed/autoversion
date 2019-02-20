@@ -70,6 +70,7 @@ class AutoVersionConfig(object):
         SemVerSigFig.patch: os.path.join("docs", "news", "*.bugfix"),
     }
     DEVMODE_TEMPLATE = "{version}.dev{count}"
+    TAG_TEMPLATE = "release/{version}"
 
     @classmethod
     def _deflate(cls):

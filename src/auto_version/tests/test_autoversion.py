@@ -78,6 +78,17 @@ class Test(unittest.TestCase):
             updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
         )
 
+    def test_to_tag(self):
+        """writes a tag in git
+        (TODO: but we cant test global tags without making a new branch etc etc)
+        """
+        version = auto_version_tool.get_dvcs_latest_tag()
+        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, persist_to=[Constants.TO_VCS], bump='major')
+        self.assertEqual(
+            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+        )
+
 
 @contextlib.contextmanager
 def Noop():

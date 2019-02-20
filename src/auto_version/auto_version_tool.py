@@ -183,6 +183,13 @@ def get_dvcs_ancestor_tag():
     return version
 
 
+def add_dvcs_tag(version):
+    """Sets a tag on the current commit"""
+    cmd = 'git tag -a %s -m "version %s"' % (config.TAG_TEMPLATE.format(version=version), version)
+    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    return version
+
+
 def main(
     set_to=None,
     set_patch_count=None,
@@ -287,7 +294,11 @@ def main(
     # finally, add in commandline overrides
     native_updates.update(extra_updates)
 
-    write_targets(config.targets, **native_updates)
+    if Constants.TO_SOURCE in persist_to:
+        write_targets(config.targets, **native_updates)
+
+    if Constants.TO_VCS in persist_to:
+        add_dvcs_tag(updates[Constants.VERSION_FIELD])
 
     return current_semver, new_semver, native_updates
 
