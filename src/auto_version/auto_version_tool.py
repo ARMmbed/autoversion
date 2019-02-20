@@ -167,6 +167,22 @@ def get_dvcs_info():
     return {Constants.COMMIT_FIELD: commit, Constants.COMMIT_COUNT_FIELD: commit_count}
 
 
+def get_dvcs_latest_tag():
+    """Gets the very latest tag across the whole repo"""
+    cmd = "git rev-list --tags --max-count=1"
+    revisions = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    cmd = "git describe --tags %s" % revisions
+    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    return version
+
+
+def get_dvcs_ancestor_tag():
+    """Gets the latest tag that's an ancestor to the current commit"""
+    cmd = "git describe --abbrev=0 --tags"
+    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    return version
+
+
 def main(
     set_to=None,
     set_patch_count=None,
@@ -175,6 +191,8 @@ def main(
     lock=None,
     file_triggers=None,
     config_path=None,
+    persist_from=Constants.FROM_SOURCE,
+    persist_to=None,
     **extra_updates
 ):
     """Main workflow.
@@ -201,6 +219,8 @@ def main(
     """
     updates = {}
 
+    persist_to = persist_to or [Constants.TO_SOURCE]
+
     if config_path:
         get_or_create_config(config_path, config)
 
@@ -213,8 +233,14 @@ def main(
     for k, v in config.key_aliases.items():
         config._forward_aliases[v] = k
 
-    all_data = read_targets(config.targets)
-    current_semver = semver.get_current_semver(all_data)
+    all_data = {}
+    if persist_from == Constants.FROM_SOURCE:
+        all_data = read_targets(config.targets)
+        current_semver = semver.get_current_semver(all_data)
+    elif persist_from == Constants.FROM_VCS_LATEST:
+        current_semver = semver.from_text(get_dvcs_latest_tag())
+    elif persist_from == Constants.FROM_VCS_ANCESTOR:
+        current_semver = semver.from_text(get_dvcs_ancestor_tag())
 
     triggers = get_all_triggers(bump, file_triggers)
     updates.update(get_lock_behaviour(triggers, all_data, lock))

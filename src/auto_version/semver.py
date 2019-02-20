@@ -12,6 +12,15 @@ _LOG = logging.getLogger(__file__)
 re_semver = re.compile(r"""(?P<major>\d+).(?P<minor>\d+).(?P<patch>\d+)(?P<tail>.*)""")
 
 
+def from_text(text):
+    """A version or None"""
+    match = re_semver.match(text)
+    if match:
+        parts = match.groupdict()
+        parts.pop("tail")
+        return SemVer(**parts)
+
+
 def get_current_semver(data):
     """Given a dictionary of all version data available, determine the current version"""
     # get the not-none values from data
@@ -35,11 +44,9 @@ def get_current_semver(data):
     for potential in potentials:
         if not potential:
             continue
-        match = re_semver.match(potential)
-        if match:
-            parts = match.groupdict()
-            parts.pop("tail")
-            versions.add(SemVer(**parts))
+        parsed = from_text(potential)
+        if parsed:
+            versions.add(parsed)
 
     if len(versions) > 1:
         raise ValueError("conflicting versions within project: %s" % versions)

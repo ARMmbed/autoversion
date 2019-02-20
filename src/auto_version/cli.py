@@ -2,6 +2,8 @@
 import argparse
 import os
 
+from auto_version.config import AutoVersionConfig as config
+from auto_version.config import Constants
 from auto_version.definitions import SemVerSigFig
 from auto_version import __version__
 
@@ -51,6 +53,19 @@ def get_cli():
         action="store_true",
         default=False,
         help="Prints the version of auto_version itself (self-version).",
+    )
+    parser.add_argument(
+        "--persist-from",
+        choices={Constants.FROM_SOURCE, Constants.FROM_VCS_ANCESTOR, Constants.FROM_VCS_LATEST},
+        default=Constants.FROM_SOURCE,
+        help="Where the current version is stored. This is the version that will be incremented.",
+    )
+    parser.add_argument(
+        "--persist-to",
+        action="append",
+        choices={Constants.TO_SOURCE, Constants.TO_VCS},
+        default=[Constants.TO_SOURCE],
+        help="Where the new version is stored. This could be in multiple places at once.",
     )
     default_config_file_path = os.path.join(os.getcwd(), "pyproject.toml")
     parser.add_argument(

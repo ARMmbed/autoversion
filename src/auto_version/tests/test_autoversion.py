@@ -10,8 +10,10 @@ import six
 from auto_version.auto_version_tool import main
 from auto_version.auto_version_tool import extract_keypairs
 from auto_version.auto_version_tool import replace_lines
+from auto_version import auto_version_tool
 from auto_version.replacement_handler import ReplacementHandler
 from auto_version.config import AutoVersionConfig as config
+from auto_version.config import Constants
 
 
 class Test(unittest.TestCase):
@@ -55,6 +57,26 @@ class Test(unittest.TestCase):
         filepath = os.path.join(os.path.dirname(__file__), "example.py")
         example = imp.load_source("example", filepath)
         self.assertEqual(example.VERSION, "20.0.0.devX")
+
+    def test_from_ancestor_tag(self):
+        """this repo itself is tagged, so we just use that"""
+        version = auto_version_tool.get_dvcs_ancestor_tag()
+        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        old, new, updates = self.call(persist_from=Constants.FROM_VCS_ANCESTOR, bump='major')
+        self.assertEqual(
+            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+        )
+
+    def test_from_global_tag(self):
+        """this repo itself is tagged, so we just use that
+        (TODO: but we cant test global tags without making a new branch etc etc)
+        """
+        version = auto_version_tool.get_dvcs_latest_tag()
+        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, bump='major')
+        self.assertEqual(
+            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+        )
 
 
 @contextlib.contextmanager
