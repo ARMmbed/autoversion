@@ -18,6 +18,7 @@ towncrier = "*"
 pytest = "==3.6.3"
 pytest-cov = "==2.5.1"
 pytest-html = "==1.19.0"
+pyautoversion = {path = ".",editable = true}
 
 [requires]
 python_version = "3.7"

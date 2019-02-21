@@ -1,8 +1,10 @@
 import imp
 import contextlib
+import subprocess
 import os
 import unittest
 import functools
+import shlex
 import re
 
 import six
@@ -16,7 +18,7 @@ from auto_version.config import AutoVersionConfig as config
 from auto_version.config import Constants
 
 
-class Test(unittest.TestCase):
+class TestBumps(unittest.TestCase):
     call = functools.partial(main, config_path="example.toml")
 
     @classmethod
@@ -58,21 +60,45 @@ class Test(unittest.TestCase):
         example = imp.load_source("example", filepath)
         self.assertEqual(example.VERSION, "20.0.0.devX")
 
+
+class TestVCSTags(unittest.TestCase):
+    call = functools.partial(main, config_path="example.toml")
+
+    @classmethod
+    def setUpClass(cls):
+        dir = os.path.dirname(__file__)
+        os.chdir(os.path.abspath(dir))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.call(set_to="19.99.0")
+
+    def setUp(self):
+        cmd = "git tag release/4.5.6"
+        subprocess.check_call(shlex.split(cmd))
+
+    def tearDown(self):
+        cmd = "git tag --delete release/4.5.6"
+        subprocess.check_call(shlex.split(cmd))
+        try:
+            cmd = "git tag --delete release/5.0.0.devX"
+            subprocess.check_call(shlex.split(cmd))
+        except Exception:
+            pass
+
     def test_from_ancestor_tag(self):
-        """this repo itself is tagged, so we just use that"""
-        version = auto_version_tool.get_dvcs_ancestor_tag()
-        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        """i.e. most immediate ancestor tag"""
+        bumped = "5.0.0.devX"
         old, new, updates = self.call(persist_from=Constants.FROM_VCS_ANCESTOR, bump='major')
         self.assertEqual(
             updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
         )
 
-    def test_from_global_tag(self):
-        """this repo itself is tagged, so we just use that
+    def test_from_latest_of_all_time(self):
+        """i.e. latest version tag across the entire repo
         (TODO: but we cant test global tags without making a new branch etc etc)
         """
-        version = auto_version_tool.get_dvcs_latest_tag()
-        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        bumped = "5.0.0.devX"
         old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, bump='major')
         self.assertEqual(
             updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
@@ -82,12 +108,13 @@ class Test(unittest.TestCase):
         """writes a tag in git
         (TODO: but we cant test global tags without making a new branch etc etc)
         """
-        version = auto_version_tool.get_dvcs_latest_tag()
-        bumped = "%s.0.0.devX" % (int(version.split('.', 1)[0]) + 1)
+        bumped = "5.0.0.devX"
         old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, persist_to=[Constants.TO_VCS], bump='major')
         self.assertEqual(
             updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
         )
+        version = auto_version_tool.get_dvcs_latest_tag_semver()
+        self.assertEqual(dict(version._asdict()), dict(major='5', minor='0', patch='0'))
 
 
 @contextlib.contextmanager
