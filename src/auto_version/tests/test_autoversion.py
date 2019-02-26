@@ -54,6 +54,12 @@ class TestBumps(unittest.TestCase):
             updates, {"VERSION": "19.99.0.devX", "VERSION_AGAIN": "19.99.0.devX"}
         )
 
+    def test_increment_prerelease(self):
+        old, new, updates = self.call(set_to="1.2.3-RC.1")
+        self.assertEqual(new, "1.2.3-RC.1")
+        old, new, updates = self.call(bump="prerelease")
+        self.assertEqual(new, "1.2.3-RC.2")
+
     def test_end_to_end(self):
         self.call(bump="major")
         filepath = os.path.join(os.path.dirname(__file__), "example.py")
