@@ -1,4 +1,4 @@
 # This project's release version
-__version__ = "1.0.24.dev54"
+__version__ = "1.1.0-pre.67+build.60"
 # This project's release commit hash
-COMMIT = "c5b127d2059c8219f5637fe45bf9e1be3a0af2aa"
+COMMIT = "e53ec58ae6f8365f69fe83e10aea251d52de7326"

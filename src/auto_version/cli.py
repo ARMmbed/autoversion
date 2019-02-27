@@ -2,10 +2,9 @@
 import argparse
 import os
 
-from auto_version.config import AutoVersionConfig as config
+from auto_version import __version__
 from auto_version.config import Constants
 from auto_version.definitions import SemVerSigFig
-from auto_version import __version__
 
 
 def get_cli():
@@ -32,9 +31,9 @@ def get_cli():
         help="Set the SemVer string. Use this locally to set the project version explicitly.",
     )
     parser.add_argument(
-        "--set-patch-count",
-        action="store_true",
-        help="Sets the patch number to the commit count.",
+        "--commit-count-as",
+        choices=SemVerSigFig,
+        help="Use the commit count to set the value of the specified field.",
     )
     parser.add_argument(
         "--lock",
@@ -56,7 +55,11 @@ def get_cli():
     )
     parser.add_argument(
         "--persist-from",
-        choices={Constants.FROM_SOURCE, Constants.FROM_VCS_ANCESTOR, Constants.FROM_VCS_LATEST},
+        choices={
+            Constants.FROM_SOURCE,
+            Constants.FROM_VCS_ANCESTOR,
+            Constants.FROM_VCS_LATEST,
+        },
         default=Constants.FROM_SOURCE,
         help="Where the current version is stored. This is the version that will be incremented.",
     )
@@ -71,7 +74,7 @@ def get_cli():
     parser.add_argument(
         "--config",
         help="Configuration file path. (default: %s)." % default_config_file_path,
-        default=default_config_file_path
+        default=default_config_file_path,
     )
     parser.add_argument(
         "-v",

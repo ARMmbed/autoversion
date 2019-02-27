@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 # defer to setup.py
 pyautoversion = {path = ".",editable = true}
+semver = "*"
 
 [dev-packages]
 "flake8" = "*"
