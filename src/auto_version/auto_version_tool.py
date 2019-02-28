@@ -96,26 +96,63 @@ def read_targets(targets):
     return results
 
 
-def detect_file_triggers(trigger_patterns):
+def detect_file_triggers(release_commit):
     """The existence of files matching configured globs will trigger a version bump"""
     triggers = set()
-    for trigger, pattern in trigger_patterns.items():
+    for trigger, pattern in config.trigger_patterns.items():
         matches = glob.glob(pattern)
+
         if matches:
-            _LOG.debug("trigger: %s bump from %r\n\t%s", trigger, pattern, matches)
-            triggers.add(trigger)
+            added_files = set(matches)
+            if release_commit:
+                # if we have a specific release commit, we will additionally filter
+                # to ensure that only files that were added since that commit are considered
+                # this allows the project to retain newsfiles for all time, rather than having to delete them
+
+                # fortunately, git filter syntax is compatible with the glob syntax we're already using
+                git_response = (
+                    subprocess.check_output(
+                        [
+                            "git",
+                            "diff",
+                            "--name-status",
+                            release_commit,
+                            "HEAD",
+                            "--diff-filter",
+                            "A",
+                            pattern,
+                        ]
+                    )
+                    .decode("utf8")
+                    .strip()
+                    .splitlines()
+                )
+                file_paths = [path.split()[1].strip() for path in git_response]
+                _LOG.debug("added since last release: %r", file_paths)
+                added_files = set(file_paths)
+
+            # perform the additional filtering
+            valid_news = added_files.intersection(matches)
+            if valid_news:
+                _LOG.debug(
+                    "trigger: %s bump from %r\n\t%s", trigger, pattern, valid_news
+                )
+                triggers.add(trigger)
+            else:
+                _LOG.debug("trigger: no match on %r because files aren't new", pattern)
         else:
             _LOG.debug("trigger: no match on %r", pattern)
     return triggers
 
 
-def get_all_triggers(bump, file_triggers):
+def get_all_triggers(bump, enable_file_triggers, release_commit):
     """Aggregated set of significant figures to bump"""
     triggers = set()
-    if file_triggers:
-        triggers = triggers.union(detect_file_triggers(config.trigger_patterns))
+    if enable_file_triggers:
+        triggers = triggers.union(detect_file_triggers(release_commit))
     if bump:
         _LOG.debug("trigger: %s bump requested", bump)
+        _ = definitions.SemVerSigFig._asdict()[bump]
         triggers.add(bump)
     return triggers
 
@@ -184,9 +221,34 @@ def get_all_versions_from_tags(tags):
     return matches
 
 
+def get_sha_from_version(version, persist_from):
+    """Given a previously tagged release version (and the tag template)
+
+    Find the commit of that version
+    """
+    if persist_from == Constants.FROM_SOURCE:
+        return None
+    try:
+        result = (
+            subprocess.check_output(
+                [
+                    "git",
+                    "rev-parse",
+                    "--verify",
+                    config.TAG_TEMPLATE.format(version=version),
+                ]
+            )
+            .decode("utf8")
+            .strip()
+        )
+        _LOG.debug("the commit of the last release is %s", result)
+        return result
+    except subprocess.CalledProcessError:
+        _LOG.exception("failed to discover the commit for the last tagged release")
+
+
 def get_dvcs_latest_tag_semver():
     """Gets the semantically latest tag across the whole repo"""
-    # TODO: limitation of our library in general: we don't understand prerelease versions
     tag_glob = config.TAG_TEMPLATE.replace("{version}", "*")
     cmd = "git tag --list %s" % tag_glob
     tags = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
@@ -196,15 +258,20 @@ def get_dvcs_latest_tag_semver():
     ordered_versions = sorted(
         set(utils.from_text_or_none(version) for version in matches)
     )
-    _LOG.debug("matched tag versions %s", ordered_versions)
-    return ordered_versions.pop()
+    result = None
+    if ordered_versions:
+        result = ordered_versions.pop()
+    _LOG.info("latest version found in across all dvcs tags: %s", result)
+    return result
 
 
 def get_dvcs_ancestor_tag_semver():
     """Gets the latest tag that's an ancestor to the current commit"""
     cmd = "git describe --abbrev=0 --tags"
     version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
-    return utils.from_text_or_none(get_all_versions_from_tags([version])[0])
+    result = utils.from_text_or_none(get_all_versions_from_tags([version])[0])
+    _LOG.info("latest version found in dvcs nearest tag: %r", result)
+    return result
 
 
 def add_dvcs_tag(version):
@@ -243,10 +310,11 @@ def main(
     release=None,
     bump=None,
     lock=None,
-    file_triggers=None,
+    enable_file_triggers=None,
     config_path=None,
     persist_from=Constants.FROM_SOURCE,
     persist_to=None,
+    dry_run=None,
     **extra_updates
 ):
     """Main workflow.
@@ -265,22 +333,15 @@ def main(
                 more significant bumps will zero the less significant ones
     :param lock: locks the version string for the next call to autoversion
                 lock only removed if a version bump would have occurred
-    :param file_triggers: whether to enable bumping based on file triggers
+    :param enable_file_triggers: whether to enable bumping based on file triggers
                 bumping occurs once if any file(s) exist that match the config
     :param config_path: path to config file
     :param extra_updates:
     :return:
     """
     updates = {}
-
     persist_to = persist_to or [Constants.TO_SOURCE]
-
-    if config_path:
-        get_or_create_config(config_path, config)
-
-    # perform some input validation
-    if bump:
-        _ = definitions.SemVerSigFig._asdict()[bump]
+    get_or_create_config(config_path, config)
 
     for k, v in config.regexers.items():
         config.regexers[k] = re.compile(v)
@@ -297,8 +358,9 @@ def main(
 
     all_data = {}
     current_semver = get_current_version(persist_from)
+    release_commit = get_sha_from_version(current_semver, persist_from)
     new_semver = current_semver = str(current_semver)
-    triggers = get_all_triggers(bump, file_triggers)
+    triggers = get_all_triggers(bump, enable_file_triggers, release_commit)
     updates.update(get_lock_behaviour(triggers, all_data, lock))
     updates.update(get_dvcs_info())
 
@@ -333,11 +395,14 @@ def main(
     # finally, add in commandline overrides
     native_updates.update(extra_updates)
 
-    if Constants.TO_SOURCE in persist_to:
-        write_targets(config.targets, **native_updates)
+    if not dry_run:
+        if Constants.TO_SOURCE in persist_to:
+            write_targets(config.targets, **native_updates)
 
-    if Constants.TO_VCS in persist_to:
-        add_dvcs_tag(updates[Constants.VERSION_FIELD])
+        if Constants.TO_VCS in persist_to:
+            add_dvcs_tag(updates[Constants.VERSION_FIELD])
+    else:
+        _LOG.warning("dry run: no changes were made")
 
     return current_semver, new_semver, native_updates
 
@@ -383,8 +448,11 @@ def main_from_cli():
         lock=args.lock,
         release=args.release,
         bump=args.bump,
-        file_triggers=args.file_triggers,
+        enable_file_triggers=args.file_triggers,
         config_path=args.config,
+        dry_run=args.show,
+        persist_from=args.persist_from,
+        persist_to=args.persist_to,
         **command_line_updates
     )
     _LOG.info("previously: %s", old)

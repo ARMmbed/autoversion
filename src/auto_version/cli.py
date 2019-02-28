@@ -14,6 +14,12 @@ def get_cli():
         description="auto version v%s: a tool to control version numbers" % __version__,
     )
     parser.add_argument(
+        "--show",
+        "--dry-run",
+        action="store_true",
+        help="Don't write anything to disk or vcs.",
+    )
+    parser.add_argument(
         "--bump",
         choices=SemVerSigFig,
         help="Bumps the specified part of SemVer string. "

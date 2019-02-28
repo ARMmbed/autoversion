@@ -53,7 +53,7 @@ class TestBumps(unittest.TestCase):
         )
 
     def test_bump_news(self):
-        old, new, updates = self.call(file_triggers=True, release=True)
+        old, new, updates = self.call(enable_file_triggers=True, release=True)
         self.assertEqual(
             updates,
             {
