@@ -92,6 +92,7 @@ def read_targets(targets):
     for target, regexer in regexer_for_targets(targets):
         with open(target) as fh:
             results.update(extract_keypairs(fh.readlines(), regexer))
+    _LOG.debug("found the following key-value pairs in source: %r", results)
     return results
 
 
@@ -287,6 +288,10 @@ def main(
     # a forward-mapping of the configured aliases
     # giving <our config param> : <the configured value>
     # if a value occurs multiple times, we take the last set value
+    # TODO: the 'forward aliases' things is way overcomplicated
+    # would be better to rework the config to have keys set-or-None
+    # since there's only a finite set of valid keys we operate on
+    config._forward_aliases.clear()
     for k, v in config.key_aliases.items():
         config._forward_aliases[v] = k
 

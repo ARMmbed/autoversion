@@ -27,11 +27,12 @@ def get_semver_from_source(data):
         for key, alias in config._forward_aliases.items()
         if data.get(alias) is not None
     }
+    _LOG.debug("valid, mapped keys: %r", known)
 
     # prefer the non-strict field, if available, because it retains more information
     potentials = [
-        known.pop(Constants.VERSION_FIELD, None),
-        known.pop(Constants.VERSION_STRICT_FIELD, None),
+        known.get(Constants.VERSION_FIELD, None),
+        known.get(Constants.VERSION_STRICT_FIELD, None),
     ]
 
     # build from components, if they're defined
@@ -43,10 +44,13 @@ def get_semver_from_source(data):
         pass
 
     versions = [potential for potential in potentials if from_text_or_none(potential)]
-    release_versions = {semver.finalize_version(potential) for potential in potentials}
+    release_versions = {semver.finalize_version(version) for version in versions}
 
     if len(release_versions) > 1:
-        raise ValueError("conflicting versions within project: %s" % versions)
+        raise ValueError(
+            "conflicting versions within project: %s\nkeys were: %r"
+            % (release_versions, known)
+        )
 
     if not versions:
         _LOG.debug("key pairs found: \n%r", known)

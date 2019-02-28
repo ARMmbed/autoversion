@@ -113,6 +113,16 @@ class TestBumps(unittest.TestCase):
         example = imp.load_source("example", filepath)
         self.assertEqual(example.VERSION, "20.0.0-dev.1")
 
+    def test_simple_config_bump(self):
+        old, new, updates = self.call(config_path="simple.toml", bump="minor")
+        self.assertEqual(new, "19.100.0-dev.1")
+        # do our own teardown...
+        self.call(config_path="simple.toml", set_to="19.99.0")
+
+    def test_custom_field_set(self):
+        old, new, updates = self.call(UNRELATED_STRING="apple")
+        self.assertEqual(updates["UNRELATED_STRING"], "apple")
+
 
 class TestVCSTags(unittest.TestCase):
     call = functools.partial(main, config_path="example.toml")
