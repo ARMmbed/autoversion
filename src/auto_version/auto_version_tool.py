@@ -98,6 +98,7 @@ def read_targets(targets):
 
 def detect_file_triggers(release_commit):
     """The existence of files matching configured globs will trigger a version bump"""
+    all_valid_trigger_files = set()
     triggers = set()
     for trigger, pattern in config.trigger_patterns.items():
         matches = glob.glob(pattern)
@@ -138,18 +139,20 @@ def detect_file_triggers(release_commit):
                     "trigger: %s bump from %r\n\t%s", trigger, pattern, valid_news
                 )
                 triggers.add(trigger)
+                all_valid_trigger_files.update(valid_news)
             else:
                 _LOG.debug("trigger: no match on %r because files aren't new", pattern)
         else:
             _LOG.debug("trigger: no match on %r", pattern)
-    return triggers
+    return triggers, all_valid_trigger_files
 
 
 def get_all_triggers(bump, enable_file_triggers, release_commit):
     """Aggregated set of significant figures to bump"""
     triggers = set()
     if enable_file_triggers:
-        triggers = triggers.union(detect_file_triggers(release_commit))
+        file_triggers, _ = detect_file_triggers(release_commit)
+        triggers.update(file_triggers)
     if bump:
         _LOG.debug("trigger: %s bump requested", bump)
         _ = definitions.SemVerSigFig._asdict()[bump]
@@ -221,7 +224,7 @@ def get_all_versions_from_tags(tags):
     return matches
 
 
-def get_sha_from_version(version, persist_from):
+def get_dvcs_commit_for_version(version, persist_from):
     """Given a previously tagged release version (and the tag template)
 
     Find the commit of that version
@@ -358,7 +361,7 @@ def main(
 
     all_data = {}
     current_semver = get_current_version(persist_from)
-    release_commit = get_sha_from_version(current_semver, persist_from)
+    release_commit = get_dvcs_commit_for_version(current_semver, persist_from)
     new_semver = current_semver = str(current_semver)
     triggers = get_all_triggers(bump, enable_file_triggers, release_commit)
     updates.update(get_lock_behaviour(triggers, all_data, lock))
@@ -458,10 +461,19 @@ def main_from_cli():
     _LOG.info("previously: %s", old)
     _LOG.info("currently:  %s", new)
     _LOG.debug("updates:\n%s", pprint.pformat(updates))
-    print(
-        updates.get(config._forward_aliases.get(Constants.VERSION_FIELD))
-        or updates.get(config._forward_aliases.get(Constants.VERSION_STRICT_FIELD))
-    )
+
+    version = updates.get(
+        config._forward_aliases.get(Constants.VERSION_FIELD)
+    ) or updates.get(config._forward_aliases.get(Constants.VERSION_STRICT_FIELD))
+
+    if args.print_file_triggers:
+        commit = get_dvcs_commit_for_version(
+            persist_from=args.persist_from, version=version
+        )
+        _, files = detect_file_triggers(commit)
+        print("\n".join(files))
+    else:
+        print(version)
 
 
 __name__ == "__main__" and main_from_cli()

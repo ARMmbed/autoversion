@@ -33,6 +33,11 @@ def get_cli():
         help="Detects need to bump based on presence of files (as specified in config).",
     )
     parser.add_argument(
+        "--print-file-triggers",
+        action="store_true",
+        help="Prints a newline separated list of files detected as bump triggers.",
+    )
+    parser.add_argument(
         "--set",
         help="Set the SemVer string. Use this locally to set the project version explicitly.",
     )
