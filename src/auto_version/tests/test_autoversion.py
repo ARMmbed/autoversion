@@ -153,7 +153,7 @@ class TestVCSTags(unittest.TestCase):
         """i.e. most immediate ancestor tag"""
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_ANCESTOR, bump="major"
+            persist_from=[Constants.FROM_VCS_ANCESTOR], bump="major"
         )
         self.assertEqual(
             updates,
@@ -166,7 +166,7 @@ class TestVCSTags(unittest.TestCase):
         """
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_LATEST, bump="major"
+            persist_from=[Constants.FROM_VCS_LATEST], bump="major"
         )
         self.assertEqual(
             updates,
@@ -179,7 +179,7 @@ class TestVCSTags(unittest.TestCase):
         """
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_LATEST,
+            persist_from=[Constants.FROM_VCS_LATEST],
             persist_to=[Constants.TO_VCS],
             bump="major",
         )

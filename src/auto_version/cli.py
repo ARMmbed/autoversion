@@ -71,15 +71,16 @@ def get_cli():
             Constants.FROM_VCS_ANCESTOR,
             Constants.FROM_VCS_LATEST,
         },
-        default=Constants.FROM_SOURCE,
-        help="Where the current version is stored. This is the version that will be incremented.",
+        action="append",
+        default=[],
+        help="Where the current version is stored. Looks for each source in order. (default: source files)",
     )
     parser.add_argument(
         "--persist-to",
         action="append",
         choices={Constants.TO_SOURCE, Constants.TO_VCS},
-        default=[Constants.TO_SOURCE],
-        help="Where the new version is stored. This could be in multiple places at once.",
+        default=[],
+        help="Where the new version is stored. This could be in multiple places at once. (default: source files)",
     )
     default_config_file_path = os.path.join(os.getcwd(), "pyproject.toml")
     parser.add_argument(

@@ -229,7 +229,7 @@ def get_dvcs_commit_for_version(version, persist_from):
 
     Find the commit of that version
     """
-    if persist_from == Constants.FROM_SOURCE:
+    if persist_from == [Constants.FROM_SOURCE]:
         return None
     try:
         result = (
@@ -259,7 +259,7 @@ def get_dvcs_latest_tag_semver():
     _LOG.debug("all tags matching simple pattern %r : %s", tag_glob, tags)
     matches = get_all_versions_from_tags(tags)
     ordered_versions = sorted(
-        set(utils.from_text_or_none(version) for version in matches)
+        {v for v in set(utils.from_text_or_none(version) for version in matches) if v}
     )
     result = None
     if ordered_versions:
@@ -288,13 +288,19 @@ def add_dvcs_tag(version):
 
 
 def get_current_version(persist_from):
-    if persist_from == Constants.FROM_SOURCE:
-        all_data = read_targets(config.targets)
-        return utils.get_semver_from_source(all_data)
-    elif persist_from == Constants.FROM_VCS_LATEST:
-        return get_dvcs_latest_tag_semver()
-    elif persist_from == Constants.FROM_VCS_ANCESTOR:
-        return get_dvcs_ancestor_tag_semver()
+    """Try loading the version from the sources in the order provided to us"""
+    version = None
+    for source in persist_from:
+        if source == Constants.FROM_SOURCE:
+            all_data = read_targets(config.targets)
+            version = utils.get_semver_from_source(all_data)
+        elif source == Constants.FROM_VCS_LATEST:
+            version = get_dvcs_latest_tag_semver()
+        elif source == Constants.FROM_VCS_ANCESTOR:
+            version = get_dvcs_ancestor_tag_semver()
+        if version:
+            break
+    return version
 
 
 def get_overrides(updates, commit_count_as):
@@ -315,7 +321,7 @@ def main(
     lock=None,
     enable_file_triggers=None,
     config_path=None,
-    persist_from=Constants.FROM_SOURCE,
+    persist_from=None,
     persist_to=None,
     dry_run=None,
     **extra_updates
@@ -344,6 +350,7 @@ def main(
     """
     updates = {}
     persist_to = persist_to or [Constants.TO_SOURCE]
+    persist_from = persist_from or [Constants.FROM_SOURCE]
     get_or_create_config(config_path, config)
 
     for k, v in config.regexers.items():
@@ -462,18 +469,14 @@ def main_from_cli():
     _LOG.info("currently:  %s", new)
     _LOG.debug("updates:\n%s", pprint.pformat(updates))
 
-    version = updates.get(
-        config._forward_aliases.get(Constants.VERSION_FIELD)
-    ) or updates.get(config._forward_aliases.get(Constants.VERSION_STRICT_FIELD))
-
     if args.print_file_triggers:
         commit = get_dvcs_commit_for_version(
-            persist_from=args.persist_from, version=version
+            persist_from=args.persist_from, version=old
         )
         _, files = detect_file_triggers(commit)
         print("\n".join(files))
     else:
-        print(version)
+        print(new)
 
 
 __name__ == "__main__" and main_from_cli()
