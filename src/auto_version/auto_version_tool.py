@@ -104,7 +104,7 @@ def detect_file_triggers(release_commit):
         matches = glob.glob(pattern)
 
         if matches:
-            added_files = set(matches)
+            valid_news = set(matches)
             if release_commit:
                 # if we have a specific release commit, we will additionally filter
                 # to ensure that only files that were added since that commit are considered
@@ -116,6 +116,7 @@ def detect_file_triggers(release_commit):
                         [
                             "git",
                             "diff",
+                            "--relative",
                             "--name-status",
                             release_commit,
                             "HEAD",
@@ -129,11 +130,10 @@ def detect_file_triggers(release_commit):
                     .splitlines()
                 )
                 file_paths = [path.split()[1].strip() for path in git_response]
-                _LOG.debug("added since last release: %r", file_paths)
-                added_files = set(file_paths)
+                _LOG.debug("trigger: added since last release: %r", file_paths)
+                valid_news.intersection_update(set(file_paths))
 
             # perform the additional filtering
-            valid_news = added_files.intersection(matches)
             if valid_news:
                 _LOG.debug(
                     "trigger: %s bump from %r\n\t%s", trigger, pattern, valid_news
@@ -141,7 +141,11 @@ def detect_file_triggers(release_commit):
                 triggers.add(trigger)
                 all_valid_trigger_files.update(valid_news)
             else:
-                _LOG.debug("trigger: no match on %r because files aren't new", pattern)
+                _LOG.debug(
+                    "trigger: no match on %r because files aren't new: %s",
+                    pattern,
+                    matches,
+                )
         else:
             _LOG.debug("trigger: no match on %r", pattern)
     return triggers, all_valid_trigger_files
