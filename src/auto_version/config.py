@@ -58,9 +58,9 @@ class AutoVersionConfig(object):
         ".properties": r"""^\s*(?P<KEY>\w+)\s*=[\t ]*(?P<VALUE>[^\r\n\t\f\v\"']+)?""",  # noqa
     }
     trigger_patterns = {
-        SemVerSigFig.major: os.path.join("docs", "news", "*.major"),
-        SemVerSigFig.minor: os.path.join("docs", "news", "*.feature"),
-        SemVerSigFig.patch: os.path.join("docs", "news", "*.bugfix"),
+        os.path.join("docs", "news", "*.major"): SemVerSigFig.major,
+        os.path.join("docs", "news", "*.feature"): SemVerSigFig.minor,
+        os.path.join("docs", "news", "*.bugfix"): SemVerSigFig.patch,
     }
     DEVMODE_TEMPLATE = "{version}.dev{count}"
 
