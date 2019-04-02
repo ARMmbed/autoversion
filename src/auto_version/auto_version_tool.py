@@ -100,7 +100,7 @@ def detect_file_triggers(release_commit):
     """The existence of files matching configured globs will trigger a version bump"""
     all_valid_trigger_files = set()
     triggers = set()
-    for trigger, pattern in config.trigger_patterns.items():
+    for pattern, trigger in config.trigger_patterns.items():
         matches = glob.glob(pattern)
 
         if matches:
