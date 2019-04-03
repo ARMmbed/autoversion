@@ -70,6 +70,7 @@ def get_cli():
             Constants.FROM_SOURCE,
             Constants.FROM_VCS_ANCESTOR,
             Constants.FROM_VCS_LATEST,
+            Constants.FROM_VCS_PREVIOUS_RELEASE,
         },
         action="append",
         default=[],

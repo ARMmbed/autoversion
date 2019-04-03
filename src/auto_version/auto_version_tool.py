@@ -254,8 +254,12 @@ def get_dvcs_commit_for_version(version, persist_from):
         _LOG.exception("failed to discover the commit for the last tagged release")
 
 
-def get_dvcs_latest_tag_semver():
-    """Gets the semantically latest tag across the whole repo"""
+def get_dvcs_ordered_tag_semvers():
+    """Gets the semantically latest tag across the whole repo
+
+    :returns: ordered list of VersionInfo instances
+    :rtype: list(semver.VersionInfo)
+    """
     tag_glob = config.TAG_TEMPLATE.replace("{version}", "*")
     cmd = "git tag --list %s" % tag_glob
     tags = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
@@ -265,11 +269,30 @@ def get_dvcs_latest_tag_semver():
     ordered_versions = sorted(
         {v for v in set(utils.from_text_or_none(version) for version in matches) if v}
     )
+    return ordered_versions
+
+
+def get_dvcs_latest_tag_semver():
+    ordered_versions = get_dvcs_ordered_tag_semvers()
     result = None
     if ordered_versions:
         result = ordered_versions.pop()
-    _LOG.info("latest version found in across all dvcs tags: %s", result)
+    _LOG.info("latest version found across all dvcs tags: %s", result)
     return result
+
+
+def get_dvcs_previous_release_semver():
+    """Gets the most recent release across the whole repo"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if version.build or version.prerelease:
+            continue
+        else:
+            break
+    else:
+        version = None
+    _LOG.info("previous release found across all dvcs tags: %s", version)
+    return version
 
 
 def get_dvcs_ancestor_tag_semver():
@@ -302,6 +325,8 @@ def get_current_version(persist_from):
             version = get_dvcs_latest_tag_semver()
         elif source == Constants.FROM_VCS_ANCESTOR:
             version = get_dvcs_ancestor_tag_semver()
+        elif source == Constants.FROM_VCS_PREVIOUS_RELEASE:
+            version = get_dvcs_previous_release_semver()
         if version:
             break
     return version

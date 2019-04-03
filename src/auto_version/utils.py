@@ -10,7 +10,10 @@ _LOG = logging.getLogger(__file__)
 
 
 def from_text_or_none(text):
-    """A version or None"""
+    """A version or None
+
+    :rtype: semver.VersionInfo | None
+    """
     if text is not None:
         try:
             return semver.parse_version_info(text)

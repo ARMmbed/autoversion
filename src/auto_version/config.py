@@ -27,6 +27,7 @@ class Constants(object):
     FROM_SOURCE = "source"
     FROM_VCS_ANCESTOR = "vcs"
     FROM_VCS_LATEST = "vcs-latest"
+    FROM_VCS_PREVIOUS_RELEASE = "vcs-previous-release"
     TO_SOURCE = "source"
     TO_VCS = "vcs"
 
