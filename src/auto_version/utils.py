@@ -75,6 +75,20 @@ def get_token_args(sig_fig):
     return token_args
 
 
+def max_sigfig(sigfigs):
+    """Given a list of significant figures, return the largest"""
+    for sig_fig in SemVerSigFig:  # iterate sig figs in order of significance
+        if sig_fig in sigfigs:
+            return sig_fig
+
+
+def semver_diff(semver1, semver2):
+    """Given some semvers, return the largest difference between them"""
+    for sig_fig in SemVerSigFig:
+        if getattr(semver1, sig_fig) != getattr(semver2, sig_fig):
+            return sig_fig
+
+
 def make_new_semver(version_string, all_triggers, **overrides):
     """Defines how to increment semver based on which significant figure is triggered
     (most significant takes precendence)
@@ -87,14 +101,12 @@ def make_new_semver(version_string, all_triggers, **overrides):
 
     # perform an increment using the most-significant trigger
     also_prerelease = True
-    for sig_fig in SemVerSigFig:  # iterate sig figs in order of significance
-        if sig_fig in all_triggers:
-            if sig_fig in (SemVerSigFig.prerelease, SemVerSigFig.build):
-                also_prerelease = False
-            version_string = getattr(semver, "bump_" + sig_fig)(
-                version_string, **get_token_args(sig_fig)
-            )
-            break
+    bump_sigfig = max_sigfig(all_triggers)
+    if bump_sigfig in (SemVerSigFig.prerelease, SemVerSigFig.build):
+        also_prerelease = False
+    version_string = getattr(semver, "bump_" + bump_sigfig)(
+        version_string, **get_token_args(bump_sigfig)
+    )
 
     if also_prerelease:
         # if we *didnt* increment sub-patch, then we should do so
