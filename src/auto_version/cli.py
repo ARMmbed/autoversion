@@ -33,7 +33,7 @@ def get_cli():
         help="Detects need to bump based on presence of files (as specified in config).",
     )
     parser.add_argument(
-        "--news-since-release",
+        "--incr-from-release",
         action="store_true",
         help="Automatically sets version number based on SCIENCE (see docs). Requires use of VCS tags.",
     )
