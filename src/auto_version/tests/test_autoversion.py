@@ -1,4 +1,5 @@
 import contextlib
+import semver
 import functools
 import imp
 import os
@@ -9,6 +10,7 @@ import unittest
 
 import six
 from auto_version import auto_version_tool
+from auto_version import utils
 from auto_version.auto_version_tool import extract_keypairs
 from auto_version.auto_version_tool import main
 from auto_version.auto_version_tool import replace_lines
@@ -122,6 +124,68 @@ class TestBumps(unittest.TestCase):
     def test_custom_field_set(self):
         old, new, updates = self.call(UNRELATED_STRING="apple")
         self.assertEqual(updates["UNRELATED_STRING"], "apple")
+
+
+class TestUtils(unittest.TestCase):
+    def test_is_release(self):
+        self.assertTrue(utils.is_release(semver.parse_version_info("1.2.3")))
+        self.assertFalse(utils.is_release(semver.parse_version_info("1.2.3-RC.1")))
+        self.assertFalse(utils.is_release(semver.parse_version_info("1.2.3+abc")))
+
+    def test_sigfig_max(self):
+        self.assertEqual("minor", utils.max_sigfig(["minor", "patch"]))
+
+    def test_sigfig_min(self):
+        self.assertEqual("minor", utils.min_sigfig(["minor", "major"]))
+
+    def test_sigfig_compare_gt(self):
+        self.assertFalse(utils.sigfig_gt("minor", "major"))
+        self.assertFalse(utils.sigfig_gt("minor", "minor"))
+        self.assertTrue(utils.sigfig_gt("major", "patch"))
+
+    def test_sigfig_compare_lt(self):
+        self.assertTrue(utils.sigfig_lt("minor", "major"))
+        self.assertFalse(utils.sigfig_lt("minor", "minor"))
+        self.assertFalse(utils.sigfig_lt("major", "patch"))
+
+    def test_semver_diff(self):
+        self.assertEqual("minor", utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.3.5")))
+        self.assertEqual("patch", utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.4-RC.1")))
+        self.assertEqual(None, utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.3")))
+
+
+class TestNewSemVerLogic(unittest.TestCase):
+    """Unit testing the core logic that determines a bump"""
+
+    @classmethod
+    def setUpClass(cls):
+        test_dir = os.path.dirname(__file__)
+        auto_version_tool.load_config(os.path.join(test_dir, "example.toml"))
+
+    def check(self, previous, current, bumps, expect):
+        previous = semver.parse_version_info(previous) if previous else None
+        self.assertEqual(
+            expect,
+            str(utils.make_new_semver(semver.parse_version_info(current), previous, bumps))
+        )
+
+    def test_release_bump(self):
+        self.check(None, "1.2.3", ["minor"], "1.3.0-dev.1")
+
+    def test_release_bump_with_history(self):
+        self.check("1.2.2", "1.2.3", ["minor"], "1.3.0-dev.1")
+
+    def test_candidate_bump_with_history_less(self):
+        # the bump is less significant than the original RC increment
+        self.check("1.0.0", "1.1.0-dev.3", ["patch"], "1.1.0-dev.4")
+
+    def test_candidate_bump_with_history_same(self):
+        # the RC has the same significance from the previous release as the bump
+        self.check("1.2.2", "1.2.3-dev.1", ["patch"], "1.2.3-dev.2")
+
+    def test_candidate_bump_with_history_more(self):
+        # the bump is more significant than the previous release, so perform that bump
+        self.check("1.2.2", "1.2.3-dev.1", ["minor"], "1.3.0-dev.1")
 
 
 class TestVCSTags(unittest.TestCase):

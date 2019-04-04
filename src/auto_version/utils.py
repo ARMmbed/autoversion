@@ -101,6 +101,11 @@ def sigfig_gt(sig_fig1, sig_fig2):
     return SemVerSigFig.index(sig_fig1) < SemVerSigFig.index(sig_fig2)
 
 
+def sigfig_lt(sig_fig1, sig_fig2):
+    """Returns True if sf1 < sf2"""
+    return SemVerSigFig.index(sig_fig1) > SemVerSigFig.index(sig_fig2)
+
+
 def is_release(semver):
     """is a semver a release version"""
     return not (semver.build or semver.prerelease)
@@ -115,32 +120,36 @@ def make_new_semver(current_semver, last_release_semver, all_triggers, **overrid
     :param overrides: explicit values for some or all of the sigfigs
     :return:
     """
+    version_string = str(current_semver)
 
-    # if the current version isn't a full release, we check to see how important the changes are
-    # in the triggers, compared to the changes made between the current version and previous release
+    # if the current version isn't a full release
     if not is_release(current_semver) and last_release_semver:
+        # we check to see how important the changes are
+        # in the triggers, compared to the changes made between the current version and previous release
         if sigfig_gt(max_sigfig(all_triggers), semver_diff(current_semver, last_release_semver)):
-            min_incr = min_sigfig(all_triggers)
-            all_triggers.clear().append(min_incr)
+            # here, the changes are more significant than the original RC bump, so we re-bump
+            pass
+        else:
+            # here the changes are same or lesser than the original RC bump, so we only bump prerelease
+            all_triggers = [SemVerSigFig.prerelease]
 
-    # perform an increment using the most-significant trigger
-    also_prerelease = True
     bump_sigfig = max_sigfig(all_triggers)
-    if bump_sigfig in (SemVerSigFig.prerelease, SemVerSigFig.build):
-        also_prerelease = False
-    version_string = getattr(semver, "bump_" + bump_sigfig)(
-        str(current_semver), **get_token_args(bump_sigfig)
-    )
 
-    if also_prerelease:
-        # if we *didnt* increment sub-patch, then we should do so
-        # this provides the "devmode template" as previously
-        # and ensures a simple 'bump' doesn't look like a full release
-        version_string = semver.bump_prerelease(
-            version_string, token=config.PRERELEASE_TOKEN
+    if bump_sigfig:
+        # perform an increment using the most-significant trigger
+        version_string = getattr(semver, "bump_" + bump_sigfig)(
+            str(current_semver), **get_token_args(bump_sigfig)
         )
 
-    # perform any explicit setting of parts
+        if sigfig_gt(bump_sigfig, SemVerSigFig.prerelease):
+            # if we *didnt* increment sub-patch already, then we should do so
+            # this provides the "devmode template" as previously
+            # and ensures a simple 'bump' doesn't look like a full release
+            version_string = semver.bump_prerelease(
+                version_string, token=config.PRERELEASE_TOKEN
+            )
+
+    # perform any explicit setting of sigfigs
     version_info = semver.parse_version_info(version_string)
     for k, v in overrides.items():
         token_args = get_token_args(k)

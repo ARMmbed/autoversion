@@ -340,6 +340,24 @@ def get_overrides(updates, commit_count_as):
     return overrides
 
 
+def load_config(config_path):
+    get_or_create_config(config_path, config)
+
+    for k, v in config.regexers.items():
+        config.regexers[k] = re.compile(v)
+
+    # a forward-mapping of the configured aliases
+    # giving <our config param> : <the configured value>
+    # if a value occurs multiple times, we take the last set value
+    # TODO: the 'forward aliases' things is way overcomplicated
+    # would be better to rework the config to have keys set-or-None
+    # since there's only a finite set of valid keys we operate on
+    config._forward_aliases.clear()
+    for k, v in config.key_aliases.items():
+        config._forward_aliases[v] = k
+    return config
+
+
 def main(
     set_to=None,
     commit_count_as=None,
@@ -387,20 +405,7 @@ def main(
     updates = {}
     persist_to = persist_to or [Constants.TO_SOURCE]
     persist_from = persist_from or [Constants.FROM_SOURCE]
-    get_or_create_config(config_path, config)
-
-    for k, v in config.regexers.items():
-        config.regexers[k] = re.compile(v)
-
-    # a forward-mapping of the configured aliases
-    # giving <our config param> : <the configured value>
-    # if a value occurs multiple times, we take the last set value
-    # TODO: the 'forward aliases' things is way overcomplicated
-    # would be better to rework the config to have keys set-or-None
-    # since there's only a finite set of valid keys we operate on
-    config._forward_aliases.clear()
-    for k, v in config.key_aliases.items():
-        config._forward_aliases[v] = k
+    load_config(config_path)
 
     all_data = {}
     last_release_semver = incr_from_release and get_dvcs_previous_release_semver()
