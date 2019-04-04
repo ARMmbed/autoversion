@@ -63,7 +63,7 @@ def get_semver_from_source(data):
     if versions:
         result = versions[0]
     _LOG.info("latest version found in source: %r", result)
-    return result
+    return semver.parse_version_info(result)
 
 
 def get_token_args(sig_fig):
@@ -82,6 +82,13 @@ def max_sigfig(sigfigs):
             return sig_fig
 
 
+def min_sigfig(sigfigs):
+    """Given a list of significant figures, return the smallest"""
+    for sig_fig in reversed(SemVerSigFig):  # iterate sig figs in order of least significance
+        if sig_fig in sigfigs:
+            return sig_fig
+
+
 def semver_diff(semver1, semver2):
     """Given some semvers, return the largest difference between them"""
     for sig_fig in SemVerSigFig:
@@ -89,15 +96,32 @@ def semver_diff(semver1, semver2):
             return sig_fig
 
 
-def make_new_semver(version_string, all_triggers, **overrides):
-    """Defines how to increment semver based on which significant figure is triggered
-    (most significant takes precendence)
+def sigfig_gt(sig_fig1, sig_fig2):
+    """Returns True if sf1 > sf2"""
+    return SemVerSigFig.index(sig_fig1) < SemVerSigFig.index(sig_fig2)
 
-    :param version_string: the version to increment
-    :param all_triggers: major/minor/patch/prerelease
+
+def is_release(semver):
+    """is a semver a release version"""
+    return not (semver.build or semver.prerelease)
+
+
+def make_new_semver(current_semver, last_release_semver, all_triggers, **overrides):
+    """Defines how to increment semver based on which significant figure is triggered
+
+    :param current_semver: the version to increment
+    :param last_release_semver: the previous release version, if available
+    :param all_triggers: list of major/minor/patch/prerelease
     :param overrides: explicit values for some or all of the sigfigs
     :return:
     """
+
+    # if the current version isn't a full release, we check to see how important the changes are
+    # in the triggers, compared to the changes made between the current version and previous release
+    if not is_release(current_semver) and last_release_semver:
+        if sigfig_gt(max_sigfig(all_triggers), semver_diff(current_semver, last_release_semver)):
+            min_incr = min_sigfig(all_triggers)
+            all_triggers.clear().append(min_incr)
 
     # perform an increment using the most-significant trigger
     also_prerelease = True
@@ -105,7 +129,7 @@ def make_new_semver(version_string, all_triggers, **overrides):
     if bump_sigfig in (SemVerSigFig.prerelease, SemVerSigFig.build):
         also_prerelease = False
     version_string = getattr(semver, "bump_" + bump_sigfig)(
-        version_string, **get_token_args(bump_sigfig)
+        str(current_semver), **get_token_args(bump_sigfig)
     )
 
     if also_prerelease:
@@ -122,6 +146,5 @@ def make_new_semver(version_string, all_triggers, **overrides):
         token_args = get_token_args(k)
         prefix = list(token_args.values()).pop() + "." if token_args else ""
         setattr(version_info, "_" + k, prefix + str(v))
-    version_string = str(version_info)
 
-    return version_string
+    return version_info

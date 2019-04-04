@@ -70,6 +70,7 @@ class AutoVersionConfig(object):
     PRERELEASE_TOKEN = "pre"
     BUILD_TOKEN = "build"
     TAG_TEMPLATE = "release/{version}"
+    MIN_NONE_RELEASE_SIGFIG = "prerelease"  # the minimum significant figure to increment is this isn't a release
 
     @classmethod
     def _deflate(cls):
