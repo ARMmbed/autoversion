@@ -409,6 +409,7 @@ def main(
 
     all_data = {}
     last_release_semver = incr_from_release and get_dvcs_previous_release_semver()
+    _LOG.debug("found previous full release: %s", last_release_semver)
     current_semver = get_current_version(persist_from)
     release_commit = get_dvcs_commit_for_version(current_semver, persist_from)
     triggers = get_all_triggers(bump, enable_file_triggers, release_commit)
