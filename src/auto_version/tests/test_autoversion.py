@@ -71,19 +71,21 @@ class TestBumps(unittest.TestCase):
         self.assertEqual(
             updates,
             {
-                "VERSION": "19.99.0-dev.1",
-                "VERSION_AGAIN": "19.99.0-dev.1",
-                "STRICT_VERSION": "19.99.0",
+                "VERSION": "19.99.1-dev.1",
+                "VERSION_AGAIN": "19.99.1-dev.1",
+                "STRICT_VERSION": "19.99.1",
             },
         )
 
     def test_build(self):
+        # can't just tag a build onto something that's already a release version
+        self.call(set_to="19.99.0+build.1")
         old, new, updates = self.call(bump="build")
         self.assertEqual(
             updates,
             {
-                "VERSION": "19.99.0+build.1",
-                "VERSION_AGAIN": "19.99.0+build.1",
+                "VERSION": "19.99.0+build.2",
+                "VERSION_AGAIN": "19.99.0+build.2",
                 "STRICT_VERSION": "19.99.0",
             },
         )
@@ -170,22 +172,31 @@ class TestNewSemVerLogic(unittest.TestCase):
         )
 
     def test_release_bump(self):
-        self.check(None, "1.2.3", ["minor"], "1.3.0-dev.1")
+        self.check(None, "1.2.3", {"minor"}, "1.3.0-dev.1")
+
+    def test_no_history_bump(self):
+        self.check(None, "1.2.3", {"prerelease"}, "1.2.4-dev.1")
+
+        # this would be wrong, because you can't pre-release something that's released
+        # self.check(None, "1.2.3", ["prerelease"], "1.2.3-dev.1")
+
+    def test_no_history_pre_bump(self):
+        self.check(None, "1.2.3-dev.1", {"prerelease"}, "1.2.3-dev.2")
 
     def test_release_bump_with_history(self):
-        self.check("1.2.2", "1.2.3", ["minor"], "1.3.0-dev.1")
+        self.check("1.2.2", "1.2.3", {"minor"}, "1.3.0-dev.1")
 
     def test_candidate_bump_with_history_less(self):
         # the bump is less significant than the original RC increment
-        self.check("1.0.0", "1.1.0-dev.3", ["patch"], "1.1.0-dev.4")
+        self.check("1.0.0", "1.1.0-dev.3", {"patch"}, "1.1.0-dev.4")
 
     def test_candidate_bump_with_history_same(self):
         # the RC has the same significance from the previous release as the bump
-        self.check("1.2.2", "1.2.3-dev.1", ["patch"], "1.2.3-dev.2")
+        self.check("1.2.2", "1.2.3-dev.1", {"patch"}, "1.2.3-dev.2")
 
     def test_candidate_bump_with_history_more(self):
         # the bump is more significant than the previous release, so perform that bump
-        self.check("1.2.2", "1.2.3-dev.1", ["minor"], "1.3.0-dev.1")
+        self.check("1.2.2", "1.2.3-dev.1", {"minor"}, "1.3.0-dev.1")
 
 
 class TestVCSTags(unittest.TestCase):

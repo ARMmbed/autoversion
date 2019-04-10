@@ -131,7 +131,12 @@ def make_new_semver(current_semver, last_release_semver, all_triggers, **overrid
             pass
         else:
             # here the changes are same or lesser than the original RC bump, so we only bump prerelease
-            all_triggers = [SemVerSigFig.prerelease]
+            all_triggers = {SemVerSigFig.prerelease}
+
+    if is_release(current_semver):
+        # if the current semver is a release, we can't just do a prerelease or build increment
+        # there *must* be a minimum patch increment, otherwise you could get 2.0.0 -> 2.0.0-RC.1
+        all_triggers.add(SemVerSigFig.patch)
 
     bump_sigfig = max_sigfig(all_triggers)
 
