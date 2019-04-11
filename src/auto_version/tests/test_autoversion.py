@@ -366,3 +366,13 @@ class XMLRegexTest(BaseReplaceCheck):
         '<Project Sdk="Microsoft.NET.Sdk">\r\n',
         """<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">\r\n""",
     ]
+
+
+class YamlRegexTest(BaseReplaceCheck):
+    regexer = re.compile(config.regexers[".yaml"])
+    lines = ["""  "custom_Key": '1.2.3.4+dev0'\r\n""",
+             """  custom_Key: 1.2.3.4+dev0\r\n"""]
+    non_matching = [
+        '  image: $CI_REGISTRY_IMAGE/versioning:$CI_COMMIT_REF_NAME\r\n',
+        """entrypoint: [""]\r\n""",
+    ]
