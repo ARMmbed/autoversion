@@ -285,18 +285,40 @@ class BaseReplaceCheck(unittest.TestCase):
     non_matching = []  # specify example lines that should not match
 
     def test_match(self):
+        """
+        Check that for each specified line, a match is triggered
+
+        n.b. a match must include the full length of the line, or nothing at all
+
+        if it includes the full length of the line, there must be two named groups
+        `KEY` and `VALUE` that contain only the key and value respectively
+
+        :return:
+        """
         for line in self.lines:
             with self.subTest(line=line) if six.PY3 else Noop():
                 extracted = extract_keypairs([line], self.regexer)
                 self.assertEqual({self.key: self.value}, extracted)
 
     def test_non_match(self):
+        """
+        Check lines that shouldn't trigger any matches
+        :return:
+        """
         for line in self.non_matching:
             with self.subTest(line=line) if six.PY3 else Noop():
                 extracted = extract_keypairs([line], self.regexer)
                 self.assertEqual({}, extracted)
 
     def test_replace(self):
+        """
+        takes all the 'lines' and generates an expected value with a simple replacement
+        (1.2.3.4+dev0 -> 5.6.7.8+dev1)
+        additionally, explicit replacements can be tested
+        they are all run through the ReplacementHandler to check
+        the expected value
+        """
+
         replacements = {}
         replacements.update(self.explicit_replacement)
         replacements.update(
@@ -373,6 +395,5 @@ class YamlRegexTest(BaseReplaceCheck):
     lines = ["""  "custom_Key": '1.2.3.4+dev0'\r\n""",
              """  custom_Key: 1.2.3.4+dev0\r\n"""]
     non_matching = [
-        '  image: $CI_REGISTRY_IMAGE/versioning:$CI_COMMIT_REF_NAME\r\n',
-        """entrypoint: [""]\r\n""",
+        """entrypoint: [""]\r\n""",  # don't match on empty arrays
     ]
