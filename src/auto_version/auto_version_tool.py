@@ -45,8 +45,12 @@ def replace_lines(regexer, handler, lines):
     result = []
     for line in lines:
         content = line.strip()
-        replaced = regexer.sub(handler, content)
-        result.append(line.replace(content, replaced, 1))
+        try:
+            replaced = regexer.sub(handler, content)
+        except KeyError:
+            result.append(line)
+        else:
+            result.append(line.replace(content, replaced, 1))
     return result
 
 
@@ -430,9 +434,13 @@ def main(
         # use triggers if the version is not set directly
         _LOG.debug("auto-incrementing version (triggers: %s)", triggers)
         overrides = get_overrides(updates, commit_count_as)
-        new_version = utils.make_new_semver(current_semver, last_release_semver, triggers, **overrides)
+        new_version = utils.make_new_semver(
+            current_semver, last_release_semver, triggers, **overrides
+        )
 
-    updates.update(get_finalised_updates(release_mode=release, version=str(new_version)))
+    updates.update(
+        get_finalised_updates(release_mode=release, version=str(new_version))
+    )
 
     # write out the individual parts of the version
     updates.update(new_version._asdict())

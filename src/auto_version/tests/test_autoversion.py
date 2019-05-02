@@ -1,5 +1,4 @@
 import contextlib
-import semver
 import functools
 import imp
 import os
@@ -8,6 +7,7 @@ import shlex
 import subprocess
 import unittest
 
+import semver
 import six
 from auto_version import auto_version_tool
 from auto_version import utils
@@ -151,9 +151,25 @@ class TestUtils(unittest.TestCase):
         self.assertFalse(utils.sigfig_lt("major", "patch"))
 
     def test_semver_diff(self):
-        self.assertEqual("minor", utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.3.5")))
-        self.assertEqual("patch", utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.4-RC.1")))
-        self.assertEqual(None, utils.semver_diff(semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.3")))
+        self.assertEqual(
+            "minor",
+            utils.semver_diff(
+                semver.parse_version_info("1.2.3"), semver.parse_version_info("1.3.5")
+            ),
+        )
+        self.assertEqual(
+            "patch",
+            utils.semver_diff(
+                semver.parse_version_info("1.2.3"),
+                semver.parse_version_info("1.2.4-RC.1"),
+            ),
+        )
+        self.assertEqual(
+            None,
+            utils.semver_diff(
+                semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.3")
+            ),
+        )
 
 
 class TestNewSemVerLogic(unittest.TestCase):
@@ -168,7 +184,11 @@ class TestNewSemVerLogic(unittest.TestCase):
         previous = semver.parse_version_info(previous) if previous else None
         self.assertEqual(
             expect,
-            str(utils.make_new_semver(semver.parse_version_info(current), previous, bumps))
+            str(
+                utils.make_new_semver(
+                    semver.parse_version_info(current), previous, bumps
+                )
+            ),
         )
 
     def test_release_bump(self):
@@ -392,8 +412,14 @@ class XMLRegexTest(BaseReplaceCheck):
 
 class YamlRegexTest(BaseReplaceCheck):
     regexer = re.compile(config.regexers[".yaml"])
-    lines = ["""  "custom_Key": '1.2.3.4+dev0'\r\n""",
-             """  custom_Key: 1.2.3.4+dev0\r\n"""]
-    non_matching = [
-        """entrypoint: [""]\r\n""",  # don't match on empty arrays
+    lines = [
+        """  "custom_Key": '1.2.3.4+dev0'\r\n""",
+        """  custom_Key: 1.2.3.4+dev0""",
+        """  custom_Key: 1.2.3.4+dev0  # comment""",
     ]
+    explicit_replacement = {
+        "    name: python:3.7.1\r\n": "    name: python:3.7.1\r\n",
+        " custom_Key: 1.2.3.4+dev0  # yay": " custom_Key: 5.6.7.8+dev1  # yay",
+        "    CTEST_ARGS: -L node_cpu\r\n": "    CTEST_ARGS: -L node_cpu\r\n",
+    }
+    non_matching = ["""entrypoint: [""]\r\n"""]  # don't match on empty arrays
