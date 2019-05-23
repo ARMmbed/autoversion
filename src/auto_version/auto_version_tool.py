@@ -276,16 +276,15 @@ def get_dvcs_ordered_tag_semvers():
     return ordered_versions
 
 
-def get_dvcs_latest_tag_semver():
+def get_dvcs_repo_latest_version_semver():
+    """Gets the most recent version across the whole repo"""
     ordered_versions = get_dvcs_ordered_tag_semvers()
-    result = None
-    if ordered_versions:
-        result = ordered_versions.pop()
-    _LOG.info("latest version found across all dvcs tags: %s", result)
-    return result
+    version = ordered_versions[-1] if ordered_versions else None
+    _LOG.info("latest version found across all dvcs tags: %s", version)
+    return version
 
 
-def get_dvcs_previous_release_semver():
+def get_dvcs_repo_latest_release_semver():
     """Gets the most recent release across the whole repo"""
     ordered_versions = get_dvcs_ordered_tag_semvers()
     for version in reversed(ordered_versions):  # type: semver.VersionInfo
@@ -293,17 +292,45 @@ def get_dvcs_previous_release_semver():
             break
     else:
         version = None
-    _LOG.info("previous release found across all dvcs tags: %s", version)
+    _LOG.info("latest release found across all dvcs tags: %s", version)
     return version
 
 
-def get_dvcs_ancestor_tag_semver():
-    """Gets the latest tag that's an ancestor to the current commit"""
-    cmd = "git describe --abbrev=0 --tags"
-    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
-    result = utils.from_text_or_none(get_all_versions_from_tags([version])[0])
-    _LOG.info("latest version found in dvcs nearest tag: %r", result)
-    return result
+def get_dvcs_previous_version_semver():
+    """Gets the latest version that's an ancestor to the current commit"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if is_ancestor(version):
+            break
+    else:
+        version = None
+    _LOG.info("previous version found in ancestral tags: %r", version)
+    return version
+
+
+def get_dvcs_previous_release_semver():
+    """Gets the latest release that's an ancestor to the current commit"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if utils.is_release(version) and is_ancestor(version):
+            break
+    else:
+        version = None
+    _LOG.info("previous release found in ancestral tags: %r", version)
+    return version
+
+
+def is_ancestor(version):
+    try:
+        # if "--is-ancestor" returns exit code 0, then it is an ancestor and we can stop looking
+        release_tag = config.TAG_TEMPLATE.replace("{version}", str(version))
+        subprocess.check_output(
+            ["git", "merge-base", "--is-ancestor", release_tag, "HEAD"]
+        )
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        return True
 
 
 def add_dvcs_tag(version):
@@ -323,12 +350,14 @@ def get_current_version(persist_from):
         if source == Constants.FROM_SOURCE:
             all_data = read_targets(config.targets)
             version = utils.get_semver_from_source(all_data)
-        elif source == Constants.FROM_VCS_LATEST:
-            version = get_dvcs_latest_tag_semver()
-        elif source == Constants.FROM_VCS_ANCESTOR:
-            version = get_dvcs_ancestor_tag_semver()
+        elif source == Constants.FROM_VCS_PREVIOUS_VERSION:
+            version = get_dvcs_previous_version_semver()
         elif source == Constants.FROM_VCS_PREVIOUS_RELEASE:
             version = get_dvcs_previous_release_semver()
+        elif source == Constants.FROM_VCS_LATEST_VERSION:
+            version = get_dvcs_repo_latest_version_semver()
+        elif source == Constants.FROM_VCS_LATEST_RELEASE:
+            version = get_dvcs_repo_latest_release_semver()
         if version:
             break
     return version
@@ -412,7 +441,7 @@ def main(
     load_config(config_path)
 
     all_data = {}
-    last_release_semver = incr_from_release and get_dvcs_previous_release_semver()
+    last_release_semver = incr_from_release and get_dvcs_repo_latest_release_semver()
     _LOG.debug("found previous full release: %s", last_release_semver)
     current_semver = get_current_version(persist_from)
     release_commit = get_dvcs_commit_for_version(current_semver, persist_from)

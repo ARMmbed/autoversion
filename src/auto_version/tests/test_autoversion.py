@@ -234,55 +234,90 @@ class TestVCSTags(unittest.TestCase):
     def setUp(self):
         cmd = "git tag release/4.5.6"
         subprocess.check_call(shlex.split(cmd))
-
-    def tearDown(self):
-        cmd = "git tag --delete release/4.5.6"
+        cmd = "git tag release/4.5.7-dev.1"
         subprocess.check_call(shlex.split(cmd))
-        try:
-            cmd = "git tag --delete release/5.0.0-dev.1"
-            subprocess.check_call(shlex.split(cmd))
-        except Exception:
-            pass
+        # todo: build a git tree with a branch, release and RC on that branch
+        # (to distinguish global vs ancestry tests)
+        self.addCleanup(
+            subprocess.check_call, shlex.split("git tag --delete release/4.5.7-dev.1")
+        )
+        self.addCleanup(
+            subprocess.check_call, shlex.split("git tag --delete release/4.5.6")
+        )
 
-    def test_from_ancestor_tag(self):
-        """i.e. most immediate ancestor tag"""
-        bumped = "5.0.0-dev.1"
+    def test_from_ancestor_version(self):
+        bumped = "4.5.7-dev.1"
         old, new, updates = self.call(
-            persist_from=[Constants.FROM_VCS_ANCESTOR], bump="major"
+            persist_from=[Constants.FROM_VCS_PREVIOUS_VERSION]
         )
         self.assertEqual(
             updates,
-            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
+            {
+                "VERSION": bumped,
+                "VERSION_AGAIN": bumped,
+                "STRICT_VERSION": semver.finalize_version(bumped),
+            },
+        )
+
+    def test_from_ancestor_release(self):
+        bumped = "4.5.6"
+        old, new, updates = self.call(
+            persist_from=[Constants.FROM_VCS_PREVIOUS_RELEASE]
+        )
+        self.assertEqual(
+            updates,
+            {
+                "VERSION": bumped,
+                "VERSION_AGAIN": bumped,
+                "STRICT_VERSION": semver.finalize_version(bumped),
+            },
         )
 
     def test_from_latest_of_all_time(self):
-        """i.e. latest version tag across the entire repo
-        (TODO: but we cant test global tags without making a new branch etc etc)
-        """
-        bumped = "5.0.0-dev.1"
-        old, new, updates = self.call(
-            persist_from=[Constants.FROM_VCS_LATEST], bump="major"
-        )
+        bumped = "4.5.7-dev.1"
+        old, new, updates = self.call(persist_from=[Constants.FROM_VCS_LATEST_VERSION])
         self.assertEqual(
             updates,
-            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
+            {
+                "VERSION": bumped,
+                "VERSION_AGAIN": bumped,
+                "STRICT_VERSION": semver.finalize_version(bumped),
+            },
+        )
+
+    def test_from_latest_of_all_time_release(self):
+        bumped = "4.5.6"
+        old, new, updates = self.call(persist_from=[Constants.FROM_VCS_LATEST_RELEASE])
+        self.assertEqual(
+            updates,
+            {
+                "VERSION": bumped,
+                "VERSION_AGAIN": bumped,
+                "STRICT_VERSION": semver.finalize_version(bumped),
+            },
         )
 
     def test_to_tag(self):
-        """writes a tag in git
-        (TODO: but we cant test global tags without making a new branch etc etc)
+        """writes a tag in to git
         """
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=[Constants.FROM_VCS_LATEST],
+            persist_from=[Constants.FROM_VCS_LATEST_VERSION],
             persist_to=[Constants.TO_VCS],
             bump="major",
         )
+        self.addCleanup(
+            subprocess.check_call, shlex.split("git tag --delete release/5.0.0-dev.1")
+        )
         self.assertEqual(
             updates,
-            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
+            {
+                "VERSION": bumped,
+                "VERSION_AGAIN": bumped,
+                "STRICT_VERSION": semver.finalize_version(bumped),
+            },
         )
-        version = auto_version_tool.get_dvcs_latest_tag_semver()
+        version = auto_version_tool.get_dvcs_repo_latest_version_semver()
         self.assertEqual(
             dict(version._asdict()),
             dict(major=5, minor=0, patch=0, build=None, prerelease="dev.1"),

@@ -73,9 +73,10 @@ def get_cli():
         "--persist-from",
         choices={
             Constants.FROM_SOURCE,
-            Constants.FROM_VCS_ANCESTOR,
-            Constants.FROM_VCS_LATEST,
+            Constants.FROM_VCS_PREVIOUS_VERSION,
             Constants.FROM_VCS_PREVIOUS_RELEASE,
+            Constants.FROM_VCS_LATEST_VERSION,
+            Constants.FROM_VCS_LATEST_RELEASE,
         },
         action="append",
         default=[],

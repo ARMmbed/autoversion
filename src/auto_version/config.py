@@ -25,9 +25,10 @@ class Constants(object):
 
     # source and destination control
     FROM_SOURCE = "source"
-    FROM_VCS_ANCESTOR = "vcs"
-    FROM_VCS_LATEST = "vcs-latest"
-    FROM_VCS_PREVIOUS_RELEASE = "vcs-previous-release"
+    FROM_VCS_PREVIOUS_VERSION = "vcs-prev-version"
+    FROM_VCS_PREVIOUS_RELEASE = "vcs-prev-release"
+    FROM_VCS_LATEST_VERSION = "vcs-global-latest"
+    FROM_VCS_LATEST_RELEASE = "vcs-global-release"
     TO_SOURCE = "source"
     TO_VCS = "vcs"
 
@@ -72,7 +73,9 @@ class AutoVersionConfig(object):
     PRERELEASE_TOKEN = "pre"
     BUILD_TOKEN = "build"
     TAG_TEMPLATE = "release/{version}"
-    MIN_NONE_RELEASE_SIGFIG = "prerelease"  # the minimum significant figure to increment is this isn't a release
+    MIN_NONE_RELEASE_SIGFIG = (
+        "prerelease"
+    )  # the minimum significant figure to increment is this isn't a release
 
     @classmethod
     def _deflate(cls):
