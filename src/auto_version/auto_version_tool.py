@@ -441,7 +441,14 @@ def main(
     load_config(config_path)
 
     all_data = {}
-    last_release_semver = incr_from_release and get_dvcs_repo_latest_release_semver()
+    last_release_semver = None
+    if incr_from_release:
+        if (Constants.FROM_VCS_PREVIOUS_VERSION in persist_from) or (
+            Constants.FROM_VCS_PREVIOUS_RELEASE in persist_from
+        ):
+            last_release_semver = get_dvcs_previous_release_semver()
+        else:
+            last_release_semver = get_dvcs_repo_latest_release_semver()
     _LOG.debug("found previous full release: %s", last_release_semver)
     current_semver = get_current_version(persist_from)
     release_commit = get_dvcs_commit_for_version(current_semver, persist_from)
