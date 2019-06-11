@@ -185,20 +185,6 @@ def get_lock_behaviour(triggers, all_data, lock):
     return updates
 
 
-def get_finalised_updates(release_mode, version):
-    """Generates update dictionary entries for the version string"""
-    production_version = semver.finalize_version(version)
-    updates = {}
-    if release_mode:
-        updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
-        updates[Constants.VERSION_FIELD] = production_version
-        updates[Constants.VERSION_STRICT_FIELD] = production_version
-    else:
-        updates[Constants.VERSION_FIELD] = version
-        updates[Constants.VERSION_STRICT_FIELD] = production_version
-    return updates
-
-
 def get_dvcs_info():
     """Gets current repository info from git"""
     cmd = "git rev-list --count HEAD"
@@ -474,9 +460,16 @@ def main(
             current_semver, last_release_semver, triggers, **overrides
         )
 
-    updates.update(
-        get_finalised_updates(release_mode=release, version=str(new_version))
-    )
+    release_string = semver.finalize_version(str(new_version))
+    release_version = semver.parse_version_info(release_string)
+    if release:
+        new_version = release_version
+        updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
+        updates[Constants.VERSION_FIELD] = release_string
+        updates[Constants.VERSION_STRICT_FIELD] = release_string
+    else:
+        updates[Constants.VERSION_FIELD] = str(new_version)
+        updates[Constants.VERSION_STRICT_FIELD] = release_string
 
     # write out the individual parts of the version
     updates.update(new_version._asdict())
