@@ -167,6 +167,50 @@ def get_dvcs_info():
     return {Constants.COMMIT_FIELD: commit, Constants.COMMIT_COUNT_FIELD: commit_count}
 
 
+def get_all_versions_from_tags(tags):
+    # build a regex from our version template
+    # (you're ok as long as you don't have our secret string in your template ...)
+    tag_re = "^" + re.escape(config.TAG_TEMPLATE.replace("{version}", "vvvvv")).replace("vvvvv", "(.*)") + "$"
+    _LOG.debug("regexing with %r", tag_re)
+    tag_re_comp = re.compile(tag_re)
+    matches = []
+    for t in tags:
+        match = tag_re_comp.match(t)
+        if not match:
+            continue
+        matches.append(match.groups()[0])
+    _LOG.debug("all versions matching regex %s", matches)
+    return matches
+
+
+def get_dvcs_latest_tag_semver():
+    """Gets the semantically latest tag across the whole repo"""
+    # TODO: limitation of our library in general: we don't understand prerelease versions
+    tag_glob = config.TAG_TEMPLATE.replace("{version}", "*")
+    cmd = "git tag --list %s" % tag_glob
+    tags = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    tags = tags.splitlines()
+    _LOG.debug("all tags matching simple pattern %r : %s", tag_glob, tags)
+    matches = get_all_versions_from_tags(tags)
+    ordered_versions = sorted(set(semver.from_text(version) for version in matches))
+    _LOG.debug("matched tag versions %s", ordered_versions)
+    return ordered_versions.pop()
+
+
+def get_dvcs_ancestor_tag_semver():
+    """Gets the latest tag that's an ancestor to the current commit"""
+    cmd = "git describe --abbrev=0 --tags"
+    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    return semver.from_text(get_all_versions_from_tags([version])[0])
+
+
+def add_dvcs_tag(version):
+    """Sets a tag on the current commit"""
+    cmd = 'git tag -a %s -m "version %s"' % (config.TAG_TEMPLATE.format(version=version), version)
+    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
+    return version
+
+
 def main(
     set_to=None,
     set_patch_count=None,
@@ -175,6 +219,8 @@ def main(
     lock=None,
     file_triggers=None,
     config_path=None,
+    persist_from=Constants.FROM_SOURCE,
+    persist_to=None,
     **extra_updates
 ):
     """Main workflow.
@@ -201,6 +247,8 @@ def main(
     """
     updates = {}
 
+    persist_to = persist_to or [Constants.TO_SOURCE]
+
     if config_path:
         get_or_create_config(config_path, config)
 
@@ -213,8 +261,14 @@ def main(
     for k, v in config.key_aliases.items():
         config._forward_aliases[v] = k
 
-    all_data = read_targets(config.targets)
-    current_semver = semver.get_current_semver(all_data)
+    all_data = {}
+    if persist_from == Constants.FROM_SOURCE:
+        all_data = read_targets(config.targets)
+        current_semver = semver.get_current_semver(all_data)
+    elif persist_from == Constants.FROM_VCS_LATEST:
+        current_semver = get_dvcs_latest_tag_semver()
+    elif persist_from == Constants.FROM_VCS_ANCESTOR:
+        current_semver = get_dvcs_ancestor_tag_semver()
 
     triggers = get_all_triggers(bump, file_triggers)
     updates.update(get_lock_behaviour(triggers, all_data, lock))
@@ -261,7 +315,11 @@ def main(
     # finally, add in commandline overrides
     native_updates.update(extra_updates)
 
-    write_targets(config.targets, **native_updates)
+    if Constants.TO_SOURCE in persist_to:
+        write_targets(config.targets, **native_updates)
+
+    if Constants.TO_VCS in persist_to:
+        add_dvcs_tag(updates[Constants.VERSION_FIELD])
 
     return current_semver, new_semver, native_updates
 

@@ -24,6 +24,13 @@ class Constants(object):
     COMMIT_COUNT_FIELD = "COMMIT_COUNT"
     COMMIT_FIELD = "COMMIT"
 
+    # source and destination control
+    FROM_SOURCE = "source"
+    FROM_VCS_ANCESTOR = "vcs"
+    FROM_VCS_LATEST = "vcs-latest"
+    TO_SOURCE = "source"
+    TO_VCS = "vcs"
+
     # as used in toml file
     CONFIG_KEY = "AutoVersionConfig"
 
@@ -63,6 +70,7 @@ class AutoVersionConfig(object):
         SemVerSigFig.patch: os.path.join("docs", "news", "*.bugfix"),
     }
     DEVMODE_TEMPLATE = "{version}.dev{count}"
+    TAG_TEMPLATE = "release/{version}"
 
     @classmethod
     def _deflate(cls):

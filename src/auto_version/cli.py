@@ -1,7 +1,9 @@
 """Load cli options"""
 import argparse
+import os
 
 from auto_version.config import AutoVersionConfig as config
+from auto_version.config import Constants
 from auto_version.definitions import SemVerSigFig
 from auto_version import __version__
 
@@ -11,14 +13,6 @@ def get_cli():
     parser = argparse.ArgumentParser(
         prog="auto_version",
         description="auto version v%s: a tool to control version numbers" % __version__,
-    )
-    parser.add_argument(
-        "--target",
-        action="append",
-        default=[],
-        help="Files containing version info. "
-        "Assumes unique variable names between files. (default: %s)."
-        % (config.targets,),
     )
     parser.add_argument(
         "--bump",
@@ -60,7 +54,25 @@ def get_cli():
         default=False,
         help="Prints the version of auto_version itself (self-version).",
     )
-    parser.add_argument("--config", help="Configuration file path.")
+    parser.add_argument(
+        "--persist-from",
+        choices={Constants.FROM_SOURCE, Constants.FROM_VCS_ANCESTOR, Constants.FROM_VCS_LATEST},
+        default=Constants.FROM_SOURCE,
+        help="Where the current version is stored. This is the version that will be incremented.",
+    )
+    parser.add_argument(
+        "--persist-to",
+        action="append",
+        choices={Constants.TO_SOURCE, Constants.TO_VCS},
+        default=[Constants.TO_SOURCE],
+        help="Where the new version is stored. This could be in multiple places at once.",
+    )
+    default_config_file_path = os.path.join(os.getcwd(), "pyproject.toml")
+    parser.add_argument(
+        "--config",
+        help="Configuration file path. (default: %s)." % default_config_file_path,
+        default=default_config_file_path
+    )
     parser.add_argument(
         "-v",
         "--verbosity",
