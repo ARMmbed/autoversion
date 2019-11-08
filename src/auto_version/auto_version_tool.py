@@ -1,3 +1,4 @@
+# flake8: noqa
 """Generates DVCS version information
 
 see also:
