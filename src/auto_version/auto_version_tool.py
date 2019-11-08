@@ -220,9 +220,9 @@ def main(
     file_triggers=None,
     config_path=None,
     persist_from=Constants.FROM_SOURCE,
-    persist_to=None, # noqa: C901
+    persist_to=None,
     **extra_updates
-):
+): # noqa: C901
     """Main workflow.
 
     Load config from cli and file
