@@ -60,7 +60,7 @@ class TestBumps(unittest.TestCase):
         example = imp.load_source("example", filepath)
         self.assertEqual(example.VERSION, "20.0.0.devX")
 
-
+@unittest.skipIf(os.getenv('CI', False), "Running on CI")
 class TestVCSTags(unittest.TestCase):
     call = functools.partial(main, config_path="example.toml")
 
