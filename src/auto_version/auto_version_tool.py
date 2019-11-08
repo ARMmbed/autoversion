@@ -1,3 +1,4 @@
+# flake8: noqa
 """Generates DVCS version information
 
 see also:
@@ -222,7 +223,7 @@ def main(
     persist_from=Constants.FROM_SOURCE,
     persist_to=None,
     **extra_updates
-): # noqa: C901
+):
     """Main workflow.
 
     Load config from cli and file
