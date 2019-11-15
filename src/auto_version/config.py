@@ -3,7 +3,6 @@ import logging
 import os
 
 import toml
-
 from auto_version.definitions import SemVerSigFig
 
 _LOG = logging.getLogger(__name__)
@@ -54,9 +53,7 @@ class AutoVersionConfig(object):
         Constants.COMMIT_FIELD: Constants.COMMIT_FIELD,
     }
     _forward_aliases = {}  # autopopulated later - reverse mapping of the above
-    targets = [
-        os.path.join("src", "_version.py"),
-    ]
+    targets = [os.path.join("src", "_version.py")]
     regexers = {
         ".json": r"""^\s*[\"]?(?P<KEY>[\w:]+)[\"]?\s*:[\t ]*[\"']?(?P<VALUE>((\\\")?[^\r\n\t\f\v\",](\\\")?)+)[\"']?,?""",  # noqa
         ".py": r"""^\s*['\"]?(?P<KEY>\w+)['\"]?\s*[=:]\s*['\"]?(?P<VALUE>[^\r\n\t\f\v\"']+)['\"]?,?""",  # noqa
@@ -69,7 +66,8 @@ class AutoVersionConfig(object):
         SemVerSigFig.minor: os.path.join("docs", "news", "*.feature"),
         SemVerSigFig.patch: os.path.join("docs", "news", "*.bugfix"),
     }
-    DEVMODE_TEMPLATE = "{version}.dev{count}"
+    PRERELEASE_TOKEN = "pre"
+    BUILD_TOKEN = "build"
     TAG_TEMPLATE = "release/{version}"
 
     @classmethod

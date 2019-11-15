@@ -22,15 +22,15 @@ import shlex
 import subprocess
 import warnings
 
+import semver
+from auto_version import __version__
+from auto_version import definitions
+from auto_version import utils
 from auto_version.cli import get_cli
 from auto_version.config import AutoVersionConfig as config
 from auto_version.config import Constants
 from auto_version.config import get_or_create_config
-import auto_version.definitions
 from auto_version.replacement_handler import ReplacementHandler
-
-from auto_version import semver
-from auto_version import __version__
 
 _LOG = logging.getLogger(__file__)
 
@@ -93,6 +93,7 @@ def read_targets(targets):
     for target, regexer in regexer_for_targets(targets):
         with open(target) as fh:
             results.update(extract_keypairs(fh.readlines(), regexer))
+    _LOG.debug("found the following key-value pairs in source: %r", results)
     return results
 
 
@@ -137,23 +138,17 @@ def get_lock_behaviour(triggers, all_data, lock):
     return updates
 
 
-def get_final_version_string(release_mode, semver, commit_count=0):
+def get_final_version_string(release_mode, version):
     """Generates update dictionary entries for the version string"""
-    version_string = ".".join(semver)
-    maybe_dev_version_string = version_string
+    production_version = semver.finalize_version(version)
     updates = {}
     if release_mode:
-        # in production, we have something like `1.2.3`, as well as a flag e.g. PRODUCTION=True
         updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
+        updates[Constants.VERSION_FIELD] = production_version
+        updates[Constants.VERSION_STRICT_FIELD] = production_version
     else:
-        # in dev mode, we have a dev marker e.g. `1.2.3.dev678`
-        maybe_dev_version_string = config.DEVMODE_TEMPLATE.format(
-            version=version_string, count=commit_count
-        )
-
-    # make available all components of the semantic version including the full string
-    updates[Constants.VERSION_FIELD] = maybe_dev_version_string
-    updates[Constants.VERSION_STRICT_FIELD] = version_string
+        updates[Constants.VERSION_FIELD] = version
+        updates[Constants.VERSION_STRICT_FIELD] = production_version
     return updates
 
 
@@ -170,8 +165,14 @@ def get_dvcs_info():
 
 def get_all_versions_from_tags(tags):
     # build a regex from our version template
-    # (you're ok as long as you don't have our secret string in your template ...)
-    tag_re = "^" + re.escape(config.TAG_TEMPLATE.replace("{version}", "vvvvv")).replace("vvvvv", "(.*)") + "$"
+    re_safe_placeholder = 10 * "v"
+    tag_re = (
+        "^"
+        + re.escape(
+            config.TAG_TEMPLATE.replace("{version}", re_safe_placeholder)
+        ).replace(re_safe_placeholder, "(.*)")
+        + "$"
+    )
     _LOG.debug("regexing with %r", tag_re)
     tag_re_comp = re.compile(tag_re)
     matches = []
@@ -193,7 +194,9 @@ def get_dvcs_latest_tag_semver():
     tags = tags.splitlines()
     _LOG.debug("all tags matching simple pattern %r : %s", tag_glob, tags)
     matches = get_all_versions_from_tags(tags)
-    ordered_versions = sorted(set(semver.from_text(version) for version in matches))
+    ordered_versions = sorted(
+        set(utils.from_text_or_none(version) for version in matches)
+    )
     _LOG.debug("matched tag versions %s", ordered_versions)
     return ordered_versions.pop()
 
@@ -202,19 +205,42 @@ def get_dvcs_ancestor_tag_semver():
     """Gets the latest tag that's an ancestor to the current commit"""
     cmd = "git describe --abbrev=0 --tags"
     version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
-    return semver.from_text(get_all_versions_from_tags([version])[0])
+    return utils.from_text_or_none(get_all_versions_from_tags([version])[0])
 
 
 def add_dvcs_tag(version):
     """Sets a tag on the current commit"""
-    cmd = 'git tag -a %s -m "version %s"' % (config.TAG_TEMPLATE.format(version=version), version)
+    cmd = 'git tag -a %s -m "version %s"' % (
+        config.TAG_TEMPLATE.format(version=version),
+        version,
+    )
     version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
     return version
 
 
+def get_current_version(persist_from):
+    if persist_from == Constants.FROM_SOURCE:
+        all_data = read_targets(config.targets)
+        return utils.get_semver_from_source(all_data)
+    elif persist_from == Constants.FROM_VCS_LATEST:
+        return get_dvcs_latest_tag_semver()
+    elif persist_from == Constants.FROM_VCS_ANCESTOR:
+        return get_dvcs_ancestor_tag_semver()
+
+
+def get_overrides(updates, commit_count_as):
+    overrides = {}
+    if commit_count_as:
+        _ = definitions.SemVerSigFig._asdict()[commit_count_as]
+        commit_number = updates[Constants.COMMIT_COUNT_FIELD]
+        _LOG.debug("using commit count for %s: %s", commit_count_as, commit_number)
+        overrides[commit_count_as] = commit_number
+    return overrides
+
+
 def main(
     set_to=None,
-    set_patch_count=None,
+    commit_count_as=None,
     release=None,
     bump=None,
     lock=None,
@@ -253,58 +279,50 @@ def main(
     if config_path:
         get_or_create_config(config_path, config)
 
+    # perform some input validation
+    if bump:
+        _ = definitions.SemVerSigFig._asdict()[bump]
+
     for k, v in config.regexers.items():
         config.regexers[k] = re.compile(v)
 
     # a forward-mapping of the configured aliases
     # giving <our config param> : <the configured value>
     # if a value occurs multiple times, we take the last set value
+    # TODO: the 'forward aliases' things is way overcomplicated
+    # would be better to rework the config to have keys set-or-None
+    # since there's only a finite set of valid keys we operate on
+    config._forward_aliases.clear()
     for k, v in config.key_aliases.items():
         config._forward_aliases[v] = k
 
     all_data = {}
-    if persist_from == Constants.FROM_SOURCE:
-        all_data = read_targets(config.targets)
-        current_semver = semver.get_current_semver(all_data)
-    elif persist_from == Constants.FROM_VCS_LATEST:
-        current_semver = get_dvcs_latest_tag_semver()
-    elif persist_from == Constants.FROM_VCS_ANCESTOR:
-        current_semver = get_dvcs_ancestor_tag_semver()
-
+    current_semver = get_current_version(persist_from)
+    new_semver = current_semver = str(current_semver)
     triggers = get_all_triggers(bump, file_triggers)
     updates.update(get_lock_behaviour(triggers, all_data, lock))
     updates.update(get_dvcs_info())
 
     if set_to:
         _LOG.debug("setting version directly: %s", set_to)
-        new_semver = auto_version.definitions.SemVer(*set_to.split("."))
+        # parse it - validation failure will raise a ValueError
+        semver.parse(set_to)
+        new_semver = set_to
         if not lock:
             warnings.warn(
-                "After setting version manually, does it need locking for a CI flow?",
+                "After setting version manually, does it need locking for a CI flow, to avoid an extraneous increment?",
                 UserWarning,
             )
-    elif set_patch_count:
-        _LOG.debug(
-            "auto-incrementing version, using commit count for patch: %s",
-            updates[Constants.COMMIT_COUNT_FIELD],
-        )
-        new_semver = semver.make_new_semver(
-            current_semver, triggers, patch=updates[Constants.COMMIT_COUNT_FIELD]
-        )
-    else:
-        _LOG.debug("auto-incrementing version")
-        new_semver = semver.make_new_semver(current_semver, triggers)
+    elif triggers:
+        # only use triggers if the version is not set directly
+        _LOG.debug("auto-incrementing version (triggers: %s)", triggers)
+        overrides = get_overrides(updates, commit_count_as)
+        new_semver = utils.make_new_semver(current_semver, triggers, **overrides)
 
-    updates.update(
-        get_final_version_string(
-            release_mode=release,
-            semver=new_semver,
-            commit_count=updates.get(Constants.COMMIT_COUNT_FIELD, 0),
-        )
-    )
+    updates.update(get_final_version_string(release_mode=release, version=new_semver))
 
-    for part in semver.SemVerSigFig:
-        updates[part] = getattr(new_semver, part)
+    # write out the individual parts of the version
+    updates.update(semver.parse(new_semver))
 
     # only rewrite a field that the user has specified in the configuration
     native_updates = {
@@ -362,7 +380,7 @@ def main_from_cli():
 
     old, new, updates = main(
         set_to=args.set,
-        set_patch_count=args.set_patch_count,
+        commit_count_as=args.commit_count_as,
         lock=args.lock,
         release=args.release,
         bump=args.bump,

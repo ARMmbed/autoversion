@@ -1,21 +1,20 @@
-import imp
 import contextlib
-import subprocess
-import os
-import unittest
 import functools
-import shlex
+import imp
+import os
 import re
+import shlex
+import subprocess
+import unittest
 
 import six
-
-from auto_version.auto_version_tool import main
-from auto_version.auto_version_tool import extract_keypairs
-from auto_version.auto_version_tool import replace_lines
 from auto_version import auto_version_tool
-from auto_version.replacement_handler import ReplacementHandler
+from auto_version.auto_version_tool import extract_keypairs
+from auto_version.auto_version_tool import main
+from auto_version.auto_version_tool import replace_lines
 from auto_version.config import AutoVersionConfig as config
 from auto_version.config import Constants
+from auto_version.replacement_handler import ReplacementHandler
 
 
 class TestBumps(unittest.TestCase):
@@ -32,33 +31,97 @@ class TestBumps(unittest.TestCase):
     def test_bump_patch(self):
         old, new, updates = self.call(bump="patch", release=True)
         self.assertEqual(
-            updates, {"RELEASE": True, "VERSION": "19.99.1", "VERSION_AGAIN": "19.99.1"}
+            updates,
+            {
+                "RELEASE": True,
+                "VERSION": "19.99.1",
+                "VERSION_AGAIN": "19.99.1",
+                "STRICT_VERSION": "19.99.1",
+            },
         )
 
     def test_bump_major(self):
         old, new, updates = self.call(bump="major", release=True)
         self.assertEqual(
-            updates, {"RELEASE": True, "VERSION": "20.0.0", "VERSION_AGAIN": "20.0.0"}
+            updates,
+            {
+                "RELEASE": True,
+                "VERSION": "20.0.0",
+                "VERSION_AGAIN": "20.0.0",
+                "STRICT_VERSION": "20.0.0",
+            },
         )
 
     def test_bump_news(self):
         old, new, updates = self.call(file_triggers=True, release=True)
         self.assertEqual(
             updates,
-            {"RELEASE": True, "VERSION": "19.100.0", "VERSION_AGAIN": "19.100.0"},
+            {
+                "RELEASE": True,
+                "VERSION": "19.100.0",
+                "VERSION_AGAIN": "19.100.0",
+                "STRICT_VERSION": "19.100.0",
+            },
         )
 
     def test_dev(self):
-        old, new, updates = self.call()
+        old, new, updates = self.call(bump="prerelease")
         self.assertEqual(
-            updates, {"VERSION": "19.99.0.devX", "VERSION_AGAIN": "19.99.0.devX"}
+            updates,
+            {
+                "VERSION": "19.99.0-dev.1",
+                "VERSION_AGAIN": "19.99.0-dev.1",
+                "STRICT_VERSION": "19.99.0",
+            },
         )
+
+    def test_build(self):
+        old, new, updates = self.call(bump="build")
+        self.assertEqual(
+            updates,
+            {
+                "VERSION": "19.99.0+build.1",
+                "VERSION_AGAIN": "19.99.0+build.1",
+                "STRICT_VERSION": "19.99.0",
+            },
+        )
+
+    def test_non_release_bump(self):
+        old, new, updates = self.call(bump="minor")
+        self.assertEqual(
+            updates,
+            {
+                "VERSION": "19.100.0-dev.1",
+                "VERSION_AGAIN": "19.100.0-dev.1",
+                "STRICT_VERSION": "19.100.0",
+            },
+        )
+
+    def test_invalid_bump(self):
+        with self.assertRaises(KeyError):
+            self.call(bump="banana")
+
+    def test_increment_existing_prerelease(self):
+        old, new, updates = self.call(set_to="1.2.3-RC.1")
+        self.assertEqual(new, "1.2.3-RC.1")
+        old, new, updates = self.call(bump="prerelease")
+        self.assertEqual(new, "1.2.3-RC.2")
 
     def test_end_to_end(self):
         self.call(bump="major")
         filepath = os.path.join(os.path.dirname(__file__), "example.py")
         example = imp.load_source("example", filepath)
-        self.assertEqual(example.VERSION, "20.0.0.devX")
+        self.assertEqual(example.VERSION, "20.0.0-dev.1")
+
+    def test_simple_config_bump(self):
+        old, new, updates = self.call(config_path="simple.toml", bump="minor")
+        self.assertEqual(new, "19.100.0-dev.1")
+        # do our own teardown...
+        self.call(config_path="simple.toml", set_to="19.99.0")
+
+    def test_custom_field_set(self):
+        old, new, updates = self.call(UNRELATED_STRING="apple")
+        self.assertEqual(updates["UNRELATED_STRING"], "apple")
 
 @unittest.skipIf(os.getenv('CI', False), "Running on CI")
 class TestVCSTags(unittest.TestCase):
@@ -81,40 +144,54 @@ class TestVCSTags(unittest.TestCase):
         cmd = "git tag --delete release/4.5.6"
         subprocess.check_call(shlex.split(cmd))
         try:
-            cmd = "git tag --delete release/5.0.0.devX"
+            cmd = "git tag --delete release/5.0.0-dev.1"
             subprocess.check_call(shlex.split(cmd))
         except Exception:
             pass
 
     def test_from_ancestor_tag(self):
         """i.e. most immediate ancestor tag"""
-        bumped = "5.0.0.devX"
-        old, new, updates = self.call(persist_from=Constants.FROM_VCS_ANCESTOR, bump='major')
+        bumped = "5.0.0-dev.1"
+        old, new, updates = self.call(
+            persist_from=Constants.FROM_VCS_ANCESTOR, bump="major"
+        )
         self.assertEqual(
-            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+            updates,
+            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
         )
 
     def test_from_latest_of_all_time(self):
         """i.e. latest version tag across the entire repo
         (TODO: but we cant test global tags without making a new branch etc etc)
         """
-        bumped = "5.0.0.devX"
-        old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, bump='major')
+        bumped = "5.0.0-dev.1"
+        old, new, updates = self.call(
+            persist_from=Constants.FROM_VCS_LATEST, bump="major"
+        )
         self.assertEqual(
-            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+            updates,
+            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
         )
 
     def test_to_tag(self):
         """writes a tag in git
         (TODO: but we cant test global tags without making a new branch etc etc)
         """
-        bumped = "5.0.0.devX"
-        old, new, updates = self.call(persist_from=Constants.FROM_VCS_LATEST, persist_to=[Constants.TO_VCS], bump='major')
+        bumped = "5.0.0-dev.1"
+        old, new, updates = self.call(
+            persist_from=Constants.FROM_VCS_LATEST,
+            persist_to=[Constants.TO_VCS],
+            bump="major",
+        )
         self.assertEqual(
-            updates, {"VERSION": bumped, "VERSION_AGAIN": bumped}
+            updates,
+            {"VERSION": bumped, "VERSION_AGAIN": bumped, "STRICT_VERSION": "5.0.0"},
         )
         version = auto_version_tool.get_dvcs_latest_tag_semver()
-        self.assertEqual(dict(version._asdict()), dict(major='5', minor='0', patch='0'))
+        self.assertEqual(
+            dict(version._asdict()),
+            dict(major=5, minor=0, patch=0, build=None, prerelease="dev.1"),
+        )
 
 
 @contextlib.contextmanager
