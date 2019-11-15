@@ -124,6 +124,7 @@ class TestBumps(unittest.TestCase):
         self.assertEqual(updates["UNRELATED_STRING"], "apple")
 
 
+@unittest.skipIf(os.getenv('CI', False), "Running on CI")
 class TestVCSTags(unittest.TestCase):
     call = functools.partial(main, config_path="example.toml")
 
