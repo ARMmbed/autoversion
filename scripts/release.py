@@ -57,8 +57,7 @@ def commit_release(repo, branch_name, version):
         ),
         author=author
     )
-    repo.create_tag(version, ref=branch_name, message='Release %s' % version,
-                    author=author)
+    repo.create_tag(version, ref=branch_name, message='Release %s' % version)
     retries = NUMBER_OF_RETRIES
     while retries > 0:
         get_latest(repo, branch_name)
@@ -66,12 +65,12 @@ def commit_release(repo, branch_name, version):
             return
         retries = retries - 1
     raise Exception("Failed committing new release")
-    mark_release_as_latest(branch_name, repo, author)
+    mark_release_as_latest(branch_name, repo)
 
 
-def mark_release_as_latest(branch_name, repo, author):
+def mark_release_as_latest(branch_name, repo):
     logging.info('Marking this commit as latest')
-    repo.create_tag('latest', force=True, author=author)
+    repo.create_tag('latest', force=True)
     while retries > 0:
         get_latest(repo, branch_name)
         if push_to_github(branch_name, repo, force=True):
