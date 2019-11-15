@@ -2,7 +2,6 @@
 import argparse
 import os
 
-from auto_version import __version__
 from auto_version.config import Constants
 from auto_version.definitions import SemVerSigFig
 
