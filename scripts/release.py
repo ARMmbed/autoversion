@@ -50,6 +50,8 @@ def commit_release(repo, branch_name, version):
 
     # Create commit
     author = Actor("monty bot", "monty-bot@arm.com")
+    repo.config_writer().set_value("user", "name", author.name).release()
+    repo.config_writer().set_value("user", "email", author.email).release()
     repo.index.commit(
         ":checkered_flag: :newspaper: Releasing version %s @ %s\n[ci skip]" % (
             version,
