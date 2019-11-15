@@ -3,7 +3,6 @@ import logging
 import os
 
 import toml
-
 from auto_version.definitions import SemVerSigFig
 
 _LOG = logging.getLogger(__name__)
@@ -23,6 +22,13 @@ class Constants(object):
     RELEASE_FIELD = "RELEASE_FIELD"
     COMMIT_COUNT_FIELD = "COMMIT_COUNT"
     COMMIT_FIELD = "COMMIT"
+
+    # source and destination control
+    FROM_SOURCE = "source"
+    FROM_VCS_ANCESTOR = "vcs"
+    FROM_VCS_LATEST = "vcs-latest"
+    TO_SOURCE = "source"
+    TO_VCS = "vcs"
 
     # as used in toml file
     CONFIG_KEY = "AutoVersionConfig"
@@ -47,9 +53,7 @@ class AutoVersionConfig(object):
         Constants.COMMIT_FIELD: Constants.COMMIT_FIELD,
     }
     _forward_aliases = {}  # autopopulated later - reverse mapping of the above
-    targets = [
-        os.path.join("src", "_version.py"),
-    ]
+    targets = [os.path.join("src", "_version.py")]
     regexers = {
         ".json": r"""^\s*[\"]?(?P<KEY>[\w:]+)[\"]?\s*:[\t ]*[\"']?(?P<VALUE>((\\\")?[^\r\n\t\f\v\",](\\\")?)+)[\"']?,?""",  # noqa
         ".py": r"""^\s*['\"]?(?P<KEY>\w+)['\"]?\s*[=:]\s*['\"]?(?P<VALUE>[^\r\n\t\f\v\"']+)['\"]?,?""",  # noqa
@@ -62,7 +66,9 @@ class AutoVersionConfig(object):
         os.path.join("docs", "news", "*.feature"): SemVerSigFig.minor,
         os.path.join("docs", "news", "*.bugfix"): SemVerSigFig.patch,
     }
-    DEVMODE_TEMPLATE = "{version}.dev{count}"
+    PRERELEASE_TOKEN = "pre"
+    BUILD_TOKEN = "build"
+    TAG_TEMPLATE = "release/{version}"
 
     @classmethod
     def _deflate(cls):

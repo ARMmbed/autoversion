@@ -1,0 +1,6 @@
+[AutoVersionConfig]
+PRERELEASE_TOKEN = 'dev'
+targets = ["example.py"]
+
+[AutoVersionConfig.key_aliases]
+VERSION_AGAIN = "VERSION_KEY"

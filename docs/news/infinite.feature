@@ -1,0 +1,2 @@
+Adds the ability to have "infinite" newsfiles. They no longer require cleaning up, if tags are used to indicate releases.
+  This requires a workflow where releases are tagged in git, so we can determine the "new news".

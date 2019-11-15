@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 # defer to setup.py
-auto_version = {editable = true, path = "."}
+pyautoversion = {path = ".",editable = true}
 
 [dev-packages]
 "flake8" = "*"
@@ -15,9 +15,10 @@ six = "*"
 coverage = "*"
 # locked to protect from Py2/3 compatibility break in more recent versions
 towncrier = "*"
-pytest = "==3.6.3"
-pytest-cov = "==2.5.1"
-pytest-html = "==1.19.0"
+pytest = "==5.2.3"
+pytest-cov = "==2.8.1"
+pytest-html = "==2.0.0"
+pyautoversion = {path = ".",editable = true}
 
 [requires]
 python_version = "3.7"
