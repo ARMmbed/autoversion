@@ -13,6 +13,14 @@ a list of versions that have been released on PyPI.
 
 ### Misc
 
+- #4
+
+
+1.2.0 (2019-11-15)
+==================
+
+### Misc
+
 - #3
 
 
