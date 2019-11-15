@@ -1,2 +1,3 @@
 GitPython
 twine==1.11
+setuptools

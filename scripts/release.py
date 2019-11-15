@@ -15,17 +15,18 @@ ENVVAR_TWINE_REPOSITORY = 'TWINE_REPOSITORY'
 ENVVAR_TWINE_REPOSITORY_URL = 'TWINE_REPOSITORY_URL'
 ENVVAR_BRANCH_NAME = "CIRCLE_BRANCH"
 ENVVAR_GITHUB_TOKEN = "GH_TOKEN"
+ENVVAR_GITHUB_TOKEN2 = "GITHUB_TOKEN"
 REPO_ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 
 
 def change_remote(repo, github_token, branch_name):
     origin_url = repo.remotes.origin.url
     path = origin_url.split('github.com', 1)[1][1:].strip()
-    new = 'https://{GH_TOKEN}:x-oauth-basic@github.com/%s' % path
+    new = 'https://{GITHUB_TOKEN}:x-oauth-basic@github.com/%s' % path
     logging.info('Rewriting git remote url to: %s' % new)
     repo.delete_remote(repo.remotes.origin)
     new_origin = repo.create_remote('origin',
-                                    url=new.format(GH_TOKEN=github_token)
+                                    url=new.format(GITHUB_TOKEN=github_token)
                                     )
     repo.git.fetch()
     repo.git.checkout(branch_name)
@@ -106,7 +107,7 @@ def get_latest(repo, branch_name):
 
 def get_new_version():
     version = subprocess.check_output(
-        ['pipenv', 'run', 'python', 'setup.py', '--version']).decode().strip()
+        ['python', 'setup.py', '--version']).decode().strip()
     if 'dev' in version:
         raise Exception('cannot release unversioned project: %s' % version)
     return version
@@ -116,12 +117,12 @@ def release_to_pypi(twine_repo, twine_username):
     logging.info('Releasing to %s as %s' % (twine_repo, twine_username))
     logging.info('Generating a release package')
     subprocess.check_call(
-        ['pipenv', 'run', 'python', 'setup.py', 'clean', '--all',
+        ['python', 'setup.py', 'clean', '--all',
          'bdist_wheel',
          '--dist-dir', 'release-dist'])
     logging.info('Uploading to PyPI')
     subprocess.check_call(
-        ['pipenv', 'run', 'python', '-m', 'twine', 'upload', 'release-dist/*'])
+        ['python', '-m', 'twine', 'upload', 'release-dist/*'])
 
 
 def get_current_branch(repo):
@@ -136,7 +137,8 @@ def get_current_branch(repo):
 
 
 def main():
-    gh_token = os.getenv(ENVVAR_GITHUB_TOKEN)
+    gh_token = os.getenv(ENVVAR_GITHUB_TOKEN) or os.getenv(
+        ENVVAR_GITHUB_TOKEN2)
     # see:
     # https://packaging.python.org/tutorials/distributing-packages/#uploading-your-project-to-pypi
     twine_repo = os.getenv('%s' % ENVVAR_TWINE_REPOSITORY_URL) or os.getenv(
@@ -145,7 +147,8 @@ def main():
 
     if not gh_token:
         logging.fatal(
-            "Environment variable [%s] (github token) is not set. Aborting." % ENVVAR_GITHUB_TOKEN
+            "Neither environment variables [%s] or [%s] (github token) are set. Aborting." % (
+                ENVVAR_GITHUB_TOKEN, ENVVAR_GITHUB_TOKEN2)
         )
         sys.exit(1)
     if not twine_repo:
