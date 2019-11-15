@@ -53,7 +53,7 @@ class TestBumps(unittest.TestCase):
         )
 
     def test_bump_news(self):
-        old, new, updates = self.call(file_triggers=True, release=True)
+        old, new, updates = self.call(enable_file_triggers=True, release=True)
         self.assertEqual(
             updates,
             {
@@ -123,6 +123,7 @@ class TestBumps(unittest.TestCase):
         old, new, updates = self.call(UNRELATED_STRING="apple")
         self.assertEqual(updates["UNRELATED_STRING"], "apple")
 
+
 @unittest.skipIf(os.getenv('CI', False), "Running on CI")
 class TestVCSTags(unittest.TestCase):
     call = functools.partial(main, config_path="example.toml")
@@ -153,7 +154,7 @@ class TestVCSTags(unittest.TestCase):
         """i.e. most immediate ancestor tag"""
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_ANCESTOR, bump="major"
+            persist_from=[Constants.FROM_VCS_ANCESTOR], bump="major"
         )
         self.assertEqual(
             updates,
@@ -166,7 +167,7 @@ class TestVCSTags(unittest.TestCase):
         """
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_LATEST, bump="major"
+            persist_from=[Constants.FROM_VCS_LATEST], bump="major"
         )
         self.assertEqual(
             updates,
@@ -179,7 +180,7 @@ class TestVCSTags(unittest.TestCase):
         """
         bumped = "5.0.0-dev.1"
         old, new, updates = self.call(
-            persist_from=Constants.FROM_VCS_LATEST,
+            persist_from=[Constants.FROM_VCS_LATEST],
             persist_to=[Constants.TO_VCS],
             bump="major",
         )

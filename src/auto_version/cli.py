@@ -14,6 +14,12 @@ def get_cli():
         description="auto version v%s: a tool to control version numbers" % __version__,
     )
     parser.add_argument(
+        "--show",
+        "--dry-run",
+        action="store_true",
+        help="Don't write anything to disk or vcs.",
+    )
+    parser.add_argument(
         "--bump",
         choices=SemVerSigFig,
         help="Bumps the specified part of SemVer string. "
@@ -25,6 +31,11 @@ def get_cli():
         action="store_true",
         dest="file_triggers",
         help="Detects need to bump based on presence of files (as specified in config).",
+    )
+    parser.add_argument(
+        "--print-file-triggers",
+        action="store_true",
+        help="Prints a newline separated list of files detected as bump triggers.",
     )
     parser.add_argument(
         "--set",
@@ -60,15 +71,16 @@ def get_cli():
             Constants.FROM_VCS_ANCESTOR,
             Constants.FROM_VCS_LATEST,
         },
-        default=Constants.FROM_SOURCE,
-        help="Where the current version is stored. This is the version that will be incremented.",
+        action="append",
+        default=[],
+        help="Where the current version is stored. Looks for each source in order. (default: source files)",
     )
     parser.add_argument(
         "--persist-to",
         action="append",
         choices={Constants.TO_SOURCE, Constants.TO_VCS},
-        default=[Constants.TO_SOURCE],
-        help="Where the new version is stored. This could be in multiple places at once.",
+        default=[],
+        help="Where the new version is stored. This could be in multiple places at once. (default: source files)",
     )
     default_config_file_path = os.path.join(os.getcwd(), "pyproject.toml")
     parser.add_argument(

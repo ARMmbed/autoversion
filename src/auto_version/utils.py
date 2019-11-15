@@ -55,7 +55,12 @@ def get_semver_from_source(data):
     if not versions:
         _LOG.debug("key pairs found: \n%r", known)
         raise ValueError("could not find existing semver")
-    return versions[0]
+
+    result = None
+    if versions:
+        result = versions[0]
+    _LOG.info("latest version found in source: %r", result)
+    return result
 
 
 def get_token_args(sig_fig):
