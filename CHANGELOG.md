@@ -11,6 +11,14 @@ a list of versions that have been released on PyPI.
 1.2.0 (2019-11-15)
 ==================
 
+### Misc
+
+- #3
+
+
+1.2.0 (2019-11-15)
+==================
+
 ### Features
 
 - Uses the [Official SemVer](https://pypi.org/project/semver) project to handle semver parsing and incrementing (#1)
