@@ -8,6 +8,35 @@ a list of versions that have been released on PyPI.
 
 [//]: # (begin_release_notes)
 
+1.2.0 (2019-11-15)
+==================
+
+### Misc
+
+- #4
+
+
+1.2.0 (2019-11-15)
+==================
+
+### Misc
+
+- #3
+
+
+1.2.0 (2019-11-15)
+==================
+
+### Features
+
+- Uses the [Official SemVer](https://pypi.org/project/semver) project to handle semver parsing and incrementing (#1)
+
+- Supports a workflow where newsfiles aren't deleted, but relevant news is instead detected based on whether they were added since the previous release. (#2)
+
+- Adds the ability to have "infinite" newsfiles. They no longer require cleaning up, if tags are used to indicate releases.
+    This requires a workflow where releases are tagged in git, so we can determine the "new news". (infinite)
+
+
 1.0.24 (2018-10-23)
 ===================
 
