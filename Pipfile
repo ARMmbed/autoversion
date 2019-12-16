@@ -15,7 +15,7 @@ six = "*"
 coverage = "*"
 # locked to protect from Py2/3 compatibility break in more recent versions
 towncrier = "*"
-pytest = "==5.3.0"
+pytest = "==5.3.2"
 pytest-cov = "==2.8.1"
 pytest-html = "==2.0.1"
 pyautoversion = {path = ".",editable = true}
