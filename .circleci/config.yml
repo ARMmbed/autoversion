@@ -78,7 +78,7 @@ jobs:
       - run:
           name: autoversion
           command: |
-            pipenv run auto_version --config=scripts/autoversion.toml --release --news
+            pipenv run auto_version --config=pyproject.toml --release --news
       - run:
           name: Generate changelog
           command: pipenv run towncrier --yes --name="" --version=$(cd ../../ && pipenv run python setup.py --version)

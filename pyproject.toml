@@ -1,6 +1,17 @@
 [AutoVersionConfig]
+CONFIG_NAME = "AUTOVERSION"
 targets = [ "src/auto_version/__version__.py",]
 
 [AutoVersionConfig.key_aliases]
 __version__ = "VERSION_KEY"
 COMMIT = "COMMIT"
+
+[AutoVersionConfig.trigger_patterns]
+"docs/news/*.bugfix"= "patch"
+"docs/news/*.doc"= "patch"
+"docs/news/*.feature"= "minor"
+"docs/news/*.major"= "major"
+"docs/news/*.minor"= "minor"
+"docs/news/*.patch"= "patch"
+"docs/news/*.removal"= "major"
+"docs/news/*.trivial"= "patch"
