@@ -64,6 +64,7 @@ class AutoVersionConfig(object):
         ".cs": r"""^(\w*\s+)*(?P<KEY>\w+)\s?[=:]\s*['\"]?(?P<VALUE>[^\r\n\t\f\v\"']+)['\"].*""",  # noqa
         ".csproj": r"""^<(?P<KEY>\w+)>(?P<VALUE>\S+)<\/\w+>""",  # noqa
         ".properties": r"""^\s*(?P<KEY>\w+)\s*=[\t ]*(?P<VALUE>[^\r\n\t\f\v\"']+)?""",  # noqa
+        ".xml": r"""^<(?P<KEY>\w+)>(?P<VALUE>\S+)<\/\w+>""",  # noqa
     }
     trigger_patterns = {
         os.path.join("docs", "news", "*.major"): SemVerSigFig.major,

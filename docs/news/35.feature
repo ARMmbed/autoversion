@@ -1,0 +1,1 @@
+Add `.xml` file extension regex

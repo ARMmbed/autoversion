@@ -436,11 +436,26 @@ class CSharpRegexTest(BaseReplaceCheck):
     }
 
 
-class XMLRegexTest(BaseReplaceCheck):
+class CSProjRegexTest(BaseReplaceCheck):
     regexer = re.compile(config.regexers[".csproj"])
     lines = ["  <custom_Key>1.2.3.4+dev0</custom_Key>\r\n"]
     non_matching = [
         '<Project Sdk="Microsoft.NET.Sdk">\r\n',
+        """<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">\r\n""",
+    ]
+
+
+class XMLRegexTest(BaseReplaceCheck):
+    key = "version"
+    value = "1.2.4"
+    regexer = re.compile(config.regexers[".xml"])
+    lines = [
+        "<version>1.2.4</version>",
+        "<version>1.2.4</version>\r\n",
+        "   <version>1.2.4</version>\r\n",
+    ]
+    non_matching = [
+        '<package format="2">\r\n',
         """<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">\r\n""",
     ]
 
