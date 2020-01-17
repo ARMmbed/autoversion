@@ -74,7 +74,7 @@ def regexer_for_targets(targets):
     """Pairs up target files with their correct regex"""
     for target in targets:
         path, file_ext = os.path.splitext(target)
-        regexer = config.regexers[file_ext]
+        regexer = config._compiled_regexers[file_ext]
         yield target, regexer
 
 
@@ -364,7 +364,7 @@ def load_config(config_path):
     get_or_create_config(config_path, config)
 
     for k, v in config.regexers.items():
-        config.regexers[k] = re.compile(v)
+        config._compiled_regexers[k] = re.compile(v)
 
     # a forward-mapping of the configured aliases
     # giving <our config param> : <the configured value>

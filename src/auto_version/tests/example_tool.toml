@@ -1,0 +1,3 @@
+[tool.autoversion]
+CONFIG_NAME = "tool"
+targets = ["banana.py"]

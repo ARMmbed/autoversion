@@ -34,6 +34,8 @@ class Constants(object):
 
     # as used in toml file
     CONFIG_KEY = "AutoVersionConfig"
+    CONFIG_TOOL_KEY = "autoversion"
+    CONFIG_TOOL_NAMESPACE = "tool"
 
 
 class AutoVersionConfig(object):
@@ -43,19 +45,10 @@ class AutoVersionConfig(object):
     RELEASED_VALUE = True
     VERSION_LOCK_VALUE = True
     VERSION_UNLOCK_VALUE = False
-    key_aliases = {
-        "__version__": Constants.VERSION_FIELD,
-        "__strict_version__": Constants.VERSION_STRICT_FIELD,
-        "PRODUCTION": Constants.RELEASE_FIELD,
-        "MAJOR": SemVerSigFig.major,
-        "MINOR": SemVerSigFig.minor,
-        "PATCH": SemVerSigFig.patch,
-        "VERSION_LOCK": Constants.VERSION_LOCK_FIELD,
-        Constants.COMMIT_COUNT_FIELD: Constants.COMMIT_COUNT_FIELD,
-        Constants.COMMIT_FIELD: Constants.COMMIT_FIELD,
-    }
+    key_aliases = {}
     _forward_aliases = {}  # autopopulated later - reverse mapping of the above
-    targets = [os.path.join("src", "_version.py")]
+    _compiled_regexers = {}  # autopopulated with re.compile
+    targets = []
     regexers = {
         ".json": r"""^\s*[\"]?(?P<KEY>[\w:]+)[\"]?\s*:[\t ]*[\"']?(?P<VALUE>((\\\")?[^\r\n\t\f\v\",](\\\")?)+)[\"']?,?""",  # noqa
         ".yaml": r"""^\s*[\"']?(?P<KEY>[\w]+)[\"']?\s*:\s*[\"']?(?P<VALUE>[\w\-.+\\\/:]*[^'\",\[\]#\s]).*""",  # noqa
@@ -81,14 +74,45 @@ class AutoVersionConfig(object):
     def _deflate(cls):
         """Prepare for serialisation - returns a dictionary"""
         data = {k: v for k, v in vars(cls).items() if not k.startswith("_")}
-        return {Constants.CONFIG_KEY: data}
+        return {Constants.CONFIG_TOOL_NAMESPACE: {Constants.CONFIG_TOOL_KEY: data}}
 
     @classmethod
     def _inflate(cls, data):
-        """Update config by deserialising input dictionary"""
-        for k, v in data[Constants.CONFIG_KEY].items():
+        """Update config by deserialising input dictionary
+
+        [AutoVersionConfig]
+        ...
+
+        or
+
+        [tool.autoversion]
+        ...
+
+        """
+        relevant = data.get(Constants.CONFIG_KEY) or (
+            data.get(Constants.CONFIG_TOOL_NAMESPACE, {}).get(
+                Constants.CONFIG_TOOL_KEY, {}
+            )
+        )
+        for k, v in relevant.items():
             setattr(cls, k, v)
         return cls._deflate()
+
+
+class ExampleConfig(AutoVersionConfig):
+    CONFIG_NAME = "an example config"
+    key_aliases = {
+        "__version__": Constants.VERSION_FIELD,
+        "__strict_version__": Constants.VERSION_STRICT_FIELD,
+        "PRODUCTION": Constants.RELEASE_FIELD,
+        "MAJOR": SemVerSigFig.major,
+        "MINOR": SemVerSigFig.minor,
+        "PATCH": SemVerSigFig.patch,
+        "VERSION_LOCK": Constants.VERSION_LOCK_FIELD,
+        Constants.COMMIT_COUNT_FIELD: Constants.COMMIT_COUNT_FIELD,
+        Constants.COMMIT_FIELD: Constants.COMMIT_FIELD,
+    }
+    targets = [os.path.join("path", "to", "source", "code")]
 
 
 def get_or_create_config(path, config):
@@ -98,6 +122,9 @@ def get_or_create_config(path, config):
             _LOG.debug("loading config from %s", os.path.abspath(path))
             config._inflate(toml.load(fh))
     else:
+        # write out an example config
+        _LOG.warning("config file %s does not exist; wrote an example `.toml`", path)
+        config._inflate(ExampleConfig._deflate())
         try:
             os.makedirs(os.path.dirname(path))
         except OSError:
