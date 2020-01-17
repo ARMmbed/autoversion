@@ -72,8 +72,9 @@ jobs:
           name: install dependencies
           # TODO: consider using pipenv
           command: |
-            sudo pip install -U pip pipenv setuptools
-            pipenv install --dev . twine==1.11
+            sudo pip install -U pip pipenv
+            sudo pip install -r scripts/requirements.txt
+            pipenv install --dev .
       - run:
           name: autoversion
           command: |
@@ -85,7 +86,7 @@ jobs:
       - run:
           name: Tag and Release
           command: |
-            pipenv run python scripts/tag_and_release.py
+            python scripts/release.py
       - store_artifacts:
           path: CHANGELOG.md
       - save_cache:
