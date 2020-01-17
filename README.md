@@ -1,23 +1,27 @@
 # Autoversion
-Cross-language tool written in Python to automatically version projects using [SemVer](https://semver.org/)
+[Semantically version](https://semver.org/) any project in any language!
+
+[Contributions](./CONTRIBUTING.md) welcome.
 
 [![CircleCI](https://circleci.com/gh/ARMmbed/autoversion.svg?style=svg&circle-token=dd9ec017be37f9b5f0a5b9a785c55c53fcd578c7)](https://circleci.com/gh/ARMmbed/autoversion)
 
 [![PyPI version](https://badge.fury.io/py/pyautoversion.svg)](https://badge.fury.io/py/pyautoversion)
 
+## [Documentation](./USAGE.md)
 
+## Quickstart
+1. You'll need Python 2 or 3
 
-## Getting started
 1. Install
     ```
     pip install pyautoversion
     ```
-2. Run `auto_version`
+1. Run `auto_version`
     - the default config file is `pyproject.toml` at the root of your project.
     - use `--config=path/to/config.toml` to customise the config path.
      It must be in [toml format](https://github.com/toml-lang/toml).
       If the file does not exist, it will be created with some example values.
-3. Adjust the configuration as necessary. In particular, set `targets` to a list of
+1. Adjust the configuration as necessary. In particular, set `targets` to a list of
 files in your project that contain variables for the tool to update.
     ```
     [tool.autoversion]
@@ -34,13 +38,13 @@ for example in _python_ you might have this line of code in a file:
     ```
     __version__ = "1.2.3"
     ```
-4. Run `auto_version` again to have the tool print out
+1. Run `auto_version` again to have the tool print out
 the currently detected version. If this doesn't work, you may need to readjust the config.
     ```
     >>> 1.2.3
     ```
 
-5. Run `auto_version --bump=patch --release -vv` to try an initial
+1. Run `auto_version --bump=patch --release -vv` to try an initial
 version increment, and view verbose details on the updates the tool has applied.
 Check your target files, and if they are as you'd expect then you're good to go!
     ```
@@ -51,8 +55,8 @@ Check your target files, and if they are as you'd expect then you're good to go!
     __version__ = "1.2.4"
     ```
 
-## Usage
-For more details about how to use the tool, have a look at the [usage page](./USAGE.md)
+## CLI
+These options are explained further in the [documentation](./USAGE.md)
 
 ```
 >>> autoversion --help
@@ -61,7 +65,7 @@ usage: auto_version [-h] [--show] [--bump {major,minor,patch,prerelease,build}] 
                     [--persist-from {vcs-global-version,vcs-global-release,vcs-prev-version,source,vcs-prev-release}] [--persist-to {vcs,source}] [--config CONFIG]
                     [-v]
 
-auto version v1.1.0-pre.67+build.60: a tool to control version numbers
+auto version v1.1.0: a tool to control version numbers
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -86,3 +90,16 @@ optional arguments:
   --config CONFIG       Configuration file path. (default: /home/david/coding/autoversion/pyproject.toml).
   -v, --verbosity       increase output verbosity. can be specified multiple times
 ```
+
+# Other tools
+These tools are variously inspirations, alternatives, or complementary
+to `autoversion`.
+
+| Project                                                    | Observations                                                                                                              |
+|------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| [towncrier](https://pypi.org/project/towncrier/)           | Automates changelog generation using newsfiles.                                                                           |
+| [incremental](https://pypi.org/project/incremental/)       | A python-specific versioning tool. Has some support for [CalVer](https://calver.org/).                                    |
+| [setuptools_scm](https://pypi.org/project/setuptools-scm/) | A python-specific versioning tool.                                                                                        |
+| [bump2version](https://pypi.org/project/bump2version/)     | A source-code versioning tool. Doesn't support newsfile detection. Highly configurable substitutions on a per-file basis. |
+| [semver](https://pypi.org/project/semver/)                 | _The_ python semantic version manipulation library.                                                                       |
+| [semver spec](https://semver.org/)                         | More like guidelines than actual rules.                                                                                   |
