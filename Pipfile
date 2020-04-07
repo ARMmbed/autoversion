@@ -17,7 +17,7 @@ coverage = "*"
 towncrier = "*"
 pytest = "==5.4.1"
 pytest-cov = "==2.8.1"
-pytest-html = "==2.0.1"
+pytest-html = "==2.1.1"
 pyautoversion = {path = ".",editable = true}
 
 [requires]
