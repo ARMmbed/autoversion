@@ -12,6 +12,7 @@ import six
 from auto_version import auto_version_tool
 from auto_version import utils
 from auto_version.auto_version_tool import extract_keypairs
+from auto_version.auto_version_tool import get_all_versions_from_tags
 from auto_version.auto_version_tool import main
 from auto_version.auto_version_tool import replace_lines
 from auto_version.config import AutoVersionConfig as config
@@ -321,6 +322,50 @@ class TestVCSTags(unittest.TestCase):
         self.assertEqual(
             dict(version._asdict()),
             dict(major=5, minor=0, patch=0, build=None, prerelease="dev.1"),
+        )
+
+
+class TestTagReplacements(unittest.TestCase):
+    some_tags = [
+        "0.0.0",
+        "0.1.0",
+        "v0.2.0",
+        "0.3.0v",
+        "my_project/0.4.0",
+        "my_project/0.5.0/releases",
+        "my_project/0.6.0-RC.2+build-99/releases",
+        r"£*ORWI\H'#[;'Q",
+    ]
+
+    @classmethod
+    def setUpClass(cls):
+        cls._default_template = config.TAG_TEMPLATE
+
+    @classmethod
+    def tearDownClass(cls):
+        config.TAG_TEMPLATE = cls._default_template
+
+    def eval(self, template, tags, expect):
+        config.TAG_TEMPLATE = template
+        self.assertEqual(get_all_versions_from_tags(tags), expect)
+
+    def test_empty_tag(self):
+        self.eval("", self.some_tags, [])
+
+    def test_v_tag(self):
+        self.eval("v{version}", self.some_tags, ["0.2.0"])
+
+    def test_plain_tag(self):
+        self.eval("{version}", self.some_tags, ["0.0.0", "0.1.0"])
+
+    def test_prefix_tag(self):
+        self.eval("my_project/{version}", self.some_tags, ["0.4.0"])
+
+    def test_prefix_suffix_tag(self):
+        self.eval(
+            "my_project/{version}/releases",
+            self.some_tags,
+            ["0.5.0", "0.6.0-RC.2+build-99"],
         )
 
 
