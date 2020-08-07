@@ -198,7 +198,7 @@ def get_dvcs_info():
 
 def get_all_versions_from_tags(tags):
     # build a regex from our version template
-    re_safe_placeholder = 10 * "v"
+    re_safe_placeholder = "THIS_IS_WHERE_THE_VERSION_GOES"
     tag_re = (
         "^"
         + re.escape(
