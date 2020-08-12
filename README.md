@@ -30,32 +30,48 @@ Check your target files, and if they are as you'd expect then you're good to go.
 For more details about how to use the tool, have a look at the [usage page](./USAGE.md)
 
 ```
-usage: auto_version [-h] [--target TARGET] [--bump {major,minor,patch}]
-                    [--news] [--set SET] [--set-patch-count] [--lock]
-                    [--release] [--version] [--config CONFIG] [-v]
+usage: auto_version [-h] [--show]
+                    [--bump {major,minor,patch,prerelease,build}] [--news]
+                    [--print-file-triggers] [--set SET]
+                    [--commit-count-as {major,minor,patch,prerelease,build}]
+                    [--lock] [--release] [--version]
+                    [--persist-from {vcs,vcs-latest,source}]
+                    [--persist-to {vcs,source}] [--config CONFIG] [-v]
 
-auto version: a tool to control version numbers
+auto version v1.2.0: a tool to control version numbers
 
 optional arguments:
   -h, --help            show this help message and exit
-  --target TARGET       Files containing version info. Assumes unique variable
-                        names between files. (default: ['src\\_version.py']).
-  --bump {major,minor,patch}
+  --show, --dry-run     Don't write anything to disk or vcs.
+  --bump {major,minor,patch,prerelease,build}
                         Bumps the specified part of SemVer string. Use this
                         locally to correctly modify the version file.
   --news, --file-triggers
                         Detects need to bump based on presence of files (as
                         specified in config).
+  --print-file-triggers
+                        Prints a newline separated list of files detected as
+                        bump triggers.
   --set SET             Set the SemVer string. Use this locally to set the
                         project version explicitly.
-  --set-patch-count     Sets the patch number to the commit count.
+  --commit-count-as {major,minor,patch,prerelease,build}
+                        Use the commit count to set the value of the specified
+                        field.
   --lock                Locks the SemVer string. Lock will remain for another
                         call to autoversion before being cleared.
   --release             Marks as a release build, which flags the build as
                         released.
   --version             Prints the version of auto_version itself (self-
                         version).
-  --config CONFIG       Configuration file path.
+  --persist-from {vcs,vcs-latest,source}
+                        Where the current version is stored. Looks for each
+                        source in order. (default: source files)
+  --persist-to {vcs,source}
+                        Where the new version is stored. This could be in
+                        multiple places at once. (default: source files)
+  --config CONFIG       Configuration file path. (default:
+                        C:\Users\adrcab01\OneDrive -
+                        Arm\Documents\GitHub\mbed-targets\pyproject.toml).
   -v, --verbosity       increase output verbosity. can be specified multiple
                         times
 ```
