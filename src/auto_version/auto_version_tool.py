@@ -198,13 +198,15 @@ def get_dvcs_info():
 
 
 def get_all_versions_from_tags(tags):
+    """this is like a reverse match from a template"""
     # build a regex from our version template
-    re_safe_placeholder = 10 * "v"
+    re_safe_placeholder = r"A_PLACEHOLDER_FOR_THE_VERSION_DETECTOR"
+    re_version_detector = r"(\d+\.\d+\.\d+(-\w+.\d+)?(\+\w+.\d+)?)"
     tag_re = (
         "^"
         + re.escape(
             config.TAG_TEMPLATE.replace("{version}", re_safe_placeholder)
-        ).replace(re_safe_placeholder, "(.*)")
+        ).replace(re_safe_placeholder, re_version_detector)
         + "$"
     )
     _LOG.debug("regexing with %r", tag_re)
