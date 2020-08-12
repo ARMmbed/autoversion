@@ -46,8 +46,12 @@ def replace_lines(regexer, handler, lines):
     result = []
     for line in lines:
         content = line.strip()
-        replaced = regexer.sub(handler, content)
-        result.append(line.replace(content, replaced, 1))
+        try:
+            replaced = regexer.sub(handler, content)
+        except KeyError:
+            result.append(line)
+        else:
+            result.append(line.replace(content, replaced, 1))
     return result
 
 
@@ -101,7 +105,7 @@ def detect_file_triggers(release_commit):
     """The existence of files matching configured globs will trigger a version bump"""
     all_valid_trigger_files = set()
     triggers = set()
-    for trigger, pattern in config.trigger_patterns.items():
+    for pattern, trigger in config.trigger_patterns.items():
         matches = glob.glob(pattern)
 
         if matches:
@@ -182,20 +186,6 @@ def get_lock_behaviour(triggers, all_data, lock):
     return updates
 
 
-def get_final_version_string(release_mode, version):
-    """Generates update dictionary entries for the version string"""
-    production_version = semver.finalize_version(version)
-    updates = {}
-    if release_mode:
-        updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
-        updates[Constants.VERSION_FIELD] = production_version
-        updates[Constants.VERSION_STRICT_FIELD] = production_version
-    else:
-        updates[Constants.VERSION_FIELD] = version
-        updates[Constants.VERSION_STRICT_FIELD] = production_version
-    return updates
-
-
 def get_dvcs_info():
     """Gets current repository info from git"""
     cmd = "git rev-list --count HEAD"
@@ -255,8 +245,12 @@ def get_dvcs_commit_for_version(version, persist_from):
         _LOG.exception("failed to discover the commit for the last tagged release")
 
 
-def get_dvcs_latest_tag_semver():
-    """Gets the semantically latest tag across the whole repo"""
+def get_dvcs_ordered_tag_semvers():
+    """Gets the semantically latest tag across the whole repo
+
+    :returns: ordered list of VersionInfo instances
+    :rtype: list(semver.VersionInfo)
+    """
     tag_glob = config.TAG_TEMPLATE.replace("{version}", "*")
     cmd = "git tag --list %s" % tag_glob
     tags = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
@@ -266,20 +260,64 @@ def get_dvcs_latest_tag_semver():
     ordered_versions = sorted(
         {v for v in set(utils.from_text_or_none(version) for version in matches) if v}
     )
-    result = None
-    if ordered_versions:
-        result = ordered_versions.pop()
-    _LOG.info("latest version found in across all dvcs tags: %s", result)
-    return result
+    return ordered_versions
 
 
-def get_dvcs_ancestor_tag_semver():
-    """Gets the latest tag that's an ancestor to the current commit"""
-    cmd = "git describe --abbrev=0 --tags"
-    version = str(subprocess.check_output(shlex.split(cmd)).decode("utf8").strip())
-    result = utils.from_text_or_none(get_all_versions_from_tags([version])[0])
-    _LOG.info("latest version found in dvcs nearest tag: %r", result)
-    return result
+def get_dvcs_repo_latest_version_semver():
+    """Gets the most recent version across the whole repo"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    version = ordered_versions[-1] if ordered_versions else None
+    _LOG.info("latest version found across all dvcs tags: %s", version)
+    return version
+
+
+def get_dvcs_repo_latest_release_semver():
+    """Gets the most recent release across the whole repo"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if utils.is_release(version):
+            break
+    else:
+        version = None
+    _LOG.info("latest release found across all dvcs tags: %s", version)
+    return version
+
+
+def get_dvcs_previous_version_semver():
+    """Gets the latest version that's an ancestor to the current commit"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if is_ancestor(version):
+            break
+    else:
+        version = None
+    _LOG.info("previous version found in ancestral tags: %r", version)
+    return version
+
+
+def get_dvcs_previous_release_semver():
+    """Gets the latest release that's an ancestor to the current commit"""
+    ordered_versions = get_dvcs_ordered_tag_semvers()
+    for version in reversed(ordered_versions):  # type: semver.VersionInfo
+        if utils.is_release(version) and is_ancestor(version):
+            break
+    else:
+        version = None
+    _LOG.info("previous release found in ancestral tags: %r", version)
+    return version
+
+
+def is_ancestor(version):
+    try:
+        # if "--is-ancestor" returns exit code 0, then it is an ancestor and we can stop looking
+        release_tag = config.TAG_TEMPLATE.replace("{version}", str(version))
+        subprocess.check_output(
+            ["git", "merge-base", "--is-ancestor", release_tag, "HEAD"]
+        )
+    except subprocess.CalledProcessError:
+        pass
+    else:
+        return True
 
 
 def add_dvcs_tag(version):
@@ -299,10 +337,14 @@ def get_current_version(persist_from):
         if source == Constants.FROM_SOURCE:
             all_data = read_targets(config.targets)
             version = utils.get_semver_from_source(all_data)
-        elif source == Constants.FROM_VCS_LATEST:
-            version = get_dvcs_latest_tag_semver()
-        elif source == Constants.FROM_VCS_ANCESTOR:
-            version = get_dvcs_ancestor_tag_semver()
+        elif source == Constants.FROM_VCS_PREVIOUS_VERSION:
+            version = get_dvcs_previous_version_semver()
+        elif source == Constants.FROM_VCS_PREVIOUS_RELEASE:
+            version = get_dvcs_previous_release_semver()
+        elif source == Constants.FROM_VCS_LATEST_VERSION:
+            version = get_dvcs_repo_latest_version_semver()
+        elif source == Constants.FROM_VCS_LATEST_RELEASE:
+            version = get_dvcs_repo_latest_release_semver()
         if version:
             break
     return version
@@ -318,6 +360,24 @@ def get_overrides(updates, commit_count_as):
     return overrides
 
 
+def load_config(config_path):
+    get_or_create_config(config_path, config)
+
+    for k, v in config.regexers.items():
+        config.regexers[k] = re.compile(v)
+
+    # a forward-mapping of the configured aliases
+    # giving <our config param> : <the configured value>
+    # if a value occurs multiple times, we take the last set value
+    # TODO: the 'forward aliases' things is way overcomplicated
+    # would be better to rework the config to have keys set-or-None
+    # since there's only a finite set of valid keys we operate on
+    config._forward_aliases.clear()
+    for k, v in config.key_aliases.items():
+        config._forward_aliases[v] = k
+    return config
+
+
 def main(
     set_to=None,
     commit_count_as=None,
@@ -325,6 +385,7 @@ def main(
     bump=None,
     lock=None,
     enable_file_triggers=None,
+    incr_from_release=None,
     config_path=None,
     persist_from=None,
     persist_to=None,
@@ -340,7 +401,7 @@ def main(
     Write out new version and any other requested variables
 
     :param set_to: explicitly set semver to this version string
-    :param set_patch_count: sets the patch number to the commit count
+    :param commit_count_as: uses the commit count for the specified sigfig
     :param release: marks with a production flag
                 just sets a single flag as per config
     :param bump: string indicating major/minor/patch
@@ -349,6 +410,14 @@ def main(
                 lock only removed if a version bump would have occurred
     :param enable_file_triggers: whether to enable bumping based on file triggers
                 bumping occurs once if any file(s) exist that match the config
+    :param incr_from_release: dynamically generates the bump by comparing the
+                proposed triggers for the current version, with the significance of the previous release
+                to ensure e.g. adding new major changes to a prerelease should probably trigger a new major version
+                specifically, the bump is:
+                if (max trigger sigfig) > (max sigfig since release):
+                    (max trigger sigfig)
+                else
+                    (min trigger sigfig)
     :param config_path: path to config file
     :param extra_updates:
     :return:
@@ -356,70 +425,76 @@ def main(
     updates = {}
     persist_to = persist_to or [Constants.TO_SOURCE]
     persist_from = persist_from or [Constants.FROM_SOURCE]
-    get_or_create_config(config_path, config)
-
-    for k, v in config.regexers.items():
-        config.regexers[k] = re.compile(v)
-
-    # a forward-mapping of the configured aliases
-    # giving <our config param> : <the configured value>
-    # if a value occurs multiple times, we take the last set value
-    # TODO: the 'forward aliases' things is way overcomplicated
-    # would be better to rework the config to have keys set-or-None
-    # since there's only a finite set of valid keys we operate on
-    config._forward_aliases.clear()
-    for k, v in config.key_aliases.items():
-        config._forward_aliases[v] = k
+    load_config(config_path)
 
     all_data = {}
+    last_release_semver = None
+    if incr_from_release:
+        if (Constants.FROM_VCS_PREVIOUS_VERSION in persist_from) or (
+            Constants.FROM_VCS_PREVIOUS_RELEASE in persist_from
+        ):
+            last_release_semver = get_dvcs_previous_release_semver()
+        else:
+            last_release_semver = get_dvcs_repo_latest_release_semver()
+    _LOG.debug("found previous full release: %s", last_release_semver)
     current_semver = get_current_version(persist_from)
     release_commit = get_dvcs_commit_for_version(current_semver, persist_from)
-    new_semver = current_semver = str(current_semver)
     triggers = get_all_triggers(bump, enable_file_triggers, release_commit)
     updates.update(get_lock_behaviour(triggers, all_data, lock))
     updates.update(get_dvcs_info())
 
+    new_version = current_semver
     if set_to:
         _LOG.debug("setting version directly: %s", set_to)
         # parse it - validation failure will raise a ValueError
-        semver.parse(set_to)
-        new_semver = set_to
+        new_version = semver.parse_version_info(set_to)
         if not lock:
             warnings.warn(
                 "After setting version manually, does it need locking for a CI flow, to avoid an extraneous increment?",
                 UserWarning,
             )
     elif triggers:
-        # only use triggers if the version is not set directly
+        # use triggers if the version is not set directly
         _LOG.debug("auto-incrementing version (triggers: %s)", triggers)
         overrides = get_overrides(updates, commit_count_as)
-        new_semver = utils.make_new_semver(current_semver, triggers, **overrides)
+        new_version = utils.make_new_semver(
+            current_semver, last_release_semver, triggers, **overrides
+        )
 
-    updates.update(get_final_version_string(release_mode=release, version=new_semver))
+    release_string = semver.finalize_version(str(new_version))
+    release_version = semver.parse_version_info(release_string)
+    if release:
+        new_version = release_version
+        updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
+        updates[Constants.VERSION_FIELD] = release_string
+        updates[Constants.VERSION_STRICT_FIELD] = release_string
+    else:
+        updates[Constants.VERSION_FIELD] = str(new_version)
+        updates[Constants.VERSION_STRICT_FIELD] = release_string
 
     # write out the individual parts of the version
-    updates.update(semver.parse(new_semver))
+    updates.update(new_version._asdict())
 
     # only rewrite a field that the user has specified in the configuration
-    native_updates = {
+    source_file_updates = {
         native: updates[key]
         for native, key in config.key_aliases.items()
         if key in updates
     }
 
     # finally, add in commandline overrides
-    native_updates.update(extra_updates)
+    source_file_updates.update(extra_updates)
 
     if not dry_run:
         if Constants.TO_SOURCE in persist_to:
-            write_targets(config.targets, **native_updates)
+            write_targets(config.targets, **source_file_updates)
 
         if Constants.TO_VCS in persist_to:
             add_dvcs_tag(updates[Constants.VERSION_FIELD])
     else:
         _LOG.warning("dry run: no changes were made")
 
-    return current_semver, new_semver, native_updates
+    return str(current_semver), str(new_version), source_file_updates
 
 
 def parse_other_args(others):
@@ -464,6 +539,7 @@ def main_from_cli():
         release=args.release,
         bump=args.bump,
         enable_file_triggers=args.file_triggers,
+        incr_from_release=args.incr_from_release,
         config_path=args.config,
         dry_run=args.show,
         persist_from=args.persist_from,

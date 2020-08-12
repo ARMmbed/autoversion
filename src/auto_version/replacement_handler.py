@@ -17,19 +17,18 @@ class ReplacementHandler(object):
         self.missing = set(params.keys())
 
     def __call__(self, match):
-        """Given a regex Match Object, return the entire replacement string"""
+        """Given a regex Match Object, return the entire replacement string
+
+        :raises KeyError:
+        """
         original = match.string
         key = match.group(Constants.KEY_GROUP)
-        replacement = self.params.get(key)
-        if replacement is None:  # if this isn't a key we are interested in replacing
-            replaced = original
-        else:
-            start, end = match.span(Constants.VALUE_GROUP)
-            if start < 0:
-                # when there's a match but zero-length for the value group, we insert it at the end
-                # of the line just after the last non-whitespace character
-                # e.g. blah=\n --> blah=text\n
-                start = end = len(original.rstrip())
-            self.missing.remove(key)
-            replaced = "".join([original[:start], str(replacement), original[end:]])
-        return replaced
+        replacement = self.params[key]  # if there's nothing in the lookup, raise KeyError
+        start, end = match.span(Constants.VALUE_GROUP)
+        if start < 0:
+            # when there's a match but zero-length for the value group, we insert it at the end
+            # of the line just after the last non-whitespace character
+            # e.g. blah=\n --> blah=text\n
+            start = end = len(original.rstrip())
+        self.missing.remove(key)
+        return "".join([original[:start], str(replacement), original[end:]])

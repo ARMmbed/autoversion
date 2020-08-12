@@ -33,6 +33,11 @@ def get_cli():
         help="Detects need to bump based on presence of files (as specified in config).",
     )
     parser.add_argument(
+        "--incr-from-release",
+        action="store_true",
+        help="Automatically sets version number based on SCIENCE (see docs). Requires use of VCS tags.",
+    )
+    parser.add_argument(
         "--print-file-triggers",
         action="store_true",
         help="Prints a newline separated list of files detected as bump triggers.",
@@ -68,8 +73,10 @@ def get_cli():
         "--persist-from",
         choices={
             Constants.FROM_SOURCE,
-            Constants.FROM_VCS_ANCESTOR,
-            Constants.FROM_VCS_LATEST,
+            Constants.FROM_VCS_PREVIOUS_VERSION,
+            Constants.FROM_VCS_PREVIOUS_RELEASE,
+            Constants.FROM_VCS_LATEST_VERSION,
+            Constants.FROM_VCS_LATEST_RELEASE,
         },
         action="append",
         default=[],
