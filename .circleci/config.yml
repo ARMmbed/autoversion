@@ -44,6 +44,8 @@ jobs:
       - run:
           name: run tests
           command: |
+            git config user.email "you@example.com"
+            git config user.name "Your Name"
             pipenv run pytest --junitxml=test-reports/results.xml
             pipenv run green -r src
       - run:
@@ -72,6 +74,8 @@ jobs:
           name: install dependencies
           # TODO: consider using pipenv
           command: |
+            git config user.email "you@example.com"
+            git config user.name "Your Name"
             sudo pip install -U pip pipenv
             sudo pip install -r scripts/requirements.txt
             pipenv install --dev .

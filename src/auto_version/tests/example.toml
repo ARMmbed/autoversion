@@ -12,4 +12,4 @@ RELEASE = "RELEASE_FIELD"
 
 [AutoVersionConfig.trigger_patterns]
 # this will trigger on existence of any python file
-minor = "*.py"
+"*.py" = "minor"

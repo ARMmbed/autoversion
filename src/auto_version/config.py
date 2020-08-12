@@ -25,8 +25,10 @@ class Constants(object):
 
     # source and destination control
     FROM_SOURCE = "source"
-    FROM_VCS_ANCESTOR = "vcs"
-    FROM_VCS_LATEST = "vcs-latest"
+    FROM_VCS_PREVIOUS_VERSION = "vcs-prev-version"
+    FROM_VCS_PREVIOUS_RELEASE = "vcs-prev-release"
+    FROM_VCS_LATEST_VERSION = "vcs-global-version"
+    FROM_VCS_LATEST_RELEASE = "vcs-global-release"
     TO_SOURCE = "source"
     TO_VCS = "vcs"
 
@@ -56,19 +58,24 @@ class AutoVersionConfig(object):
     targets = [os.path.join("src", "_version.py")]
     regexers = {
         ".json": r"""^\s*[\"]?(?P<KEY>[\w:]+)[\"]?\s*:[\t ]*[\"']?(?P<VALUE>((\\\")?[^\r\n\t\f\v\",](\\\")?)+)[\"']?,?""",  # noqa
+        ".yaml": r"""^\s*[\"']?(?P<KEY>[\w]+)[\"']?\s*:\s*[\"']?(?P<VALUE>[\w\-.+\\\/:]*[^'\",\[\]#\s]).*""",  # noqa
+        ".yml": r"""^\s*[\"']?(?P<KEY>[\w]+)[\"']?\s*:\s*[\"']?(?P<VALUE>[\w\-.+\\\/:]*[^'\",\[\]#\s]).*""",  # noqa
         ".py": r"""^\s*['\"]?(?P<KEY>\w+)['\"]?\s*[=:]\s*['\"]?(?P<VALUE>[^\r\n\t\f\v\"']+)['\"]?,?""",  # noqa
         ".cs": r"""^(\w*\s+)*(?P<KEY>\w+)\s?[=:]\s*['\"]?(?P<VALUE>[^\r\n\t\f\v\"']+)['\"].*""",  # noqa
         ".csproj": r"""^<(?P<KEY>\w+)>(?P<VALUE>\S+)<\/\w+>""",  # noqa
         ".properties": r"""^\s*(?P<KEY>\w+)\s*=[\t ]*(?P<VALUE>[^\r\n\t\f\v\"']+)?""",  # noqa
     }
     trigger_patterns = {
-        SemVerSigFig.major: os.path.join("docs", "news", "*.major"),
-        SemVerSigFig.minor: os.path.join("docs", "news", "*.feature"),
-        SemVerSigFig.patch: os.path.join("docs", "news", "*.bugfix"),
+        os.path.join("docs", "news", "*.major"): SemVerSigFig.major,
+        os.path.join("docs", "news", "*.feature"): SemVerSigFig.minor,
+        os.path.join("docs", "news", "*.bugfix"): SemVerSigFig.patch,
     }
     PRERELEASE_TOKEN = "pre"
     BUILD_TOKEN = "build"
     TAG_TEMPLATE = "release/{version}"
+    MIN_NONE_RELEASE_SIGFIG = (
+        "prerelease"
+    )  # the minimum significant figure to increment is this isn't a release
 
     @classmethod
     def _deflate(cls):

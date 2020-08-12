@@ -1,0 +1,2 @@
+Reworked the DVCS persistence to load from previous tags either globally, or previous to the current commit.
+The CLI `--persist-from` options were renamed to accommodate this.

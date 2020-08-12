@@ -1,0 +1,2 @@
+Breaking change to the config spec: the trigger_patterns are specified as pattern:sigfig
+in order to support multiple file patterns for each significant figure
