@@ -449,7 +449,7 @@ def main(
     if set_to:
         _LOG.debug("setting version directly: %s", set_to)
         # parse it - validation failure will raise a ValueError
-        new_version = semver.parse_version_info(set_to)
+        new_version = semver.Version.parse(set_to)
         if not lock:
             warnings.warn(
                 "After setting version manually, does it need locking for a CI flow, to avoid an extraneous increment?",
@@ -463,8 +463,8 @@ def main(
             current_semver, last_release_semver, triggers, **overrides
         )
 
-    release_string = semver.finalize_version(str(new_version))
-    release_version = semver.parse_version_info(release_string)
+    release_version = new_version.finalize_version()
+    release_string = str(release_version)
     if release:
         new_version = release_version
         updates[Constants.RELEASE_FIELD] = config.RELEASED_VALUE
@@ -475,7 +475,7 @@ def main(
         updates[Constants.VERSION_STRICT_FIELD] = release_string
 
     # write out the individual parts of the version
-    updates.update(new_version._asdict())
+    updates.update(new_version.to_dict())
 
     # only rewrite a field that the user has specified in the configuration
     source_file_updates = {
