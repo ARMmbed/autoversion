@@ -1,2 +1,2 @@
 toml
-semver
+semver~=2.10
