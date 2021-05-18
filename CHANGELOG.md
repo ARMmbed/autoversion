@@ -9,6 +9,8 @@ a list of versions that have been released on PyPI.
 [//]: # (begin_release_notes)
 
 2.0.0 (2021-05-18)
+==================
+
 ### Features
 
 - Adds better workflow for incrementing patches. (#5)
