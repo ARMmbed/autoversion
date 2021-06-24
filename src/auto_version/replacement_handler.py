@@ -30,5 +30,6 @@ class ReplacementHandler(object):
             # of the line just after the last non-whitespace character
             # e.g. blah=\n --> blah=text\n
             start = end = len(original.rstrip())
-        self.missing.remove(key)
+        if key in self.missing:
+            self.missing.remove(key)
         return "".join([original[:start], str(replacement), original[end:]])
