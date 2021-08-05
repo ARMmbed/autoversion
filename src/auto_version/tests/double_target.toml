@@ -1,0 +1,15 @@
+[AutoVersionConfig]
+CONFIG_NAME = 'example'
+PRERELEASE_TOKEN = 'dev'
+targets = ["example.py", "example2.py"]
+
+[AutoVersionConfig.key_aliases]
+VERSION = "VERSION_KEY"
+VERSION_AGAIN = "VERSION_KEY"
+STRICT_VERSION = "VERSION_KEY_STRICT"
+LOCK = "VERSION_LOCK"
+RELEASE = "RELEASE_FIELD"
+
+[AutoVersionConfig.trigger_patterns]
+# this will trigger on existence of any python file
+"*.py" = "minor"
