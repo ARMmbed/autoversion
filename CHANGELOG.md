@@ -8,6 +8,12 @@ a list of versions that have been released on PyPI.
 
 [//]: # (begin_release_notes)
 
+2.0.1 (2021-08-05)
+### Bugfixes
+
+- Fix bug when having multiple file targets (#1)
+
+
 2.0.0 (2021-05-18)
 ==================
 
