@@ -129,6 +129,39 @@ class TestBumps(unittest.TestCase):
         self.assertEqual(updates["UNRELATED_STRING"], "apple")
 
 
+class TestMultiFileBumps(unittest.TestCase):
+    call = functools.partial(main, config_path="double_target.toml")
+
+    @classmethod
+    def setUpClass(cls):
+        dir = os.path.dirname(__file__)
+        os.chdir(os.path.abspath(dir))
+
+    def tearDown(self):
+        self.call(set_to="19.99.0")
+
+    def test_bump_patch(self):
+        old, new, updates = self.call(bump="patch", release=True)
+        self.assertEqual(
+            updates,
+            {
+                "RELEASE": True,
+                "VERSION": "19.99.1",
+                "VERSION_AGAIN": "19.99.1",
+                "STRICT_VERSION": "19.99.1",
+            },
+        )
+        with open("example2.py", "r") as f:
+            second_file = f.read()
+            self.assertEqual(second_file, '''LOCK = False
+RELEASE = True
+VERSION = "19.99.1"
+VERSION_AGAIN = "19.99.1"
+STRICT_VERSION = "19.99.1"
+UNRELATED_STRING = "apple"
+''')
+
+
 class TestUtils(unittest.TestCase):
     def test_is_release(self):
         self.assertTrue(utils.is_release(semver.parse_version_info("1.2.3")))

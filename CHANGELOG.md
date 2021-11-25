@@ -8,6 +8,31 @@ a list of versions that have been released on PyPI.
 
 [//]: # (begin_release_notes)
 
+2.0.1 (2021-08-05)
+### Bugfixes
+
+- Fix bug when having multiple file targets (#1)
+
+
+2.0.0 (2021-05-18)
+==================
+
+### Features
+
+- Adds better workflow for incrementing patches. (#5)
+
+- Adds the ability to have "infinite" newsfiles. They no longer require cleaning up, if tags are used to indicate releases.
+    This requires a workflow where releases are tagged in git, so we can determine the "new news". (#6)
+
+### Bugfixes
+
+- Fix SemVer dependency version (#12)
+
+### Improved Documentation
+
+- Releasing new version (#10)
+
+
 1.2.0 (2019-11-15)
 ==================
 
