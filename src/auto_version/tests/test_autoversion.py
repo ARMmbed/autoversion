@@ -1,10 +1,10 @@
 import contextlib
 import functools
-import imp
 import os
 import re
 import shlex
 import subprocess
+import textwrap
 import unittest
 
 import semver
@@ -115,8 +115,21 @@ class TestBumps(unittest.TestCase):
     def test_end_to_end(self):
         self.call(bump="major")
         filepath = os.path.join(os.path.dirname(__file__), "example.py")
-        example = imp.load_source("example", filepath)
-        self.assertEqual(example.VERSION, "20.0.0-dev.1")
+        with open(filepath) as fh:
+            content = fh.read()
+        self.assertEqual(
+            content,
+            textwrap.dedent(
+                """
+        LOCK = False
+        RELEASE = True
+        VERSION = "20.0.0-dev.1"
+        VERSION_AGAIN = "20.0.0-dev.1"
+        STRICT_VERSION = "20.0.0"
+        UNRELATED_STRING = "apple"
+        """
+            ).lstrip(),
+        )
 
     def test_simple_config_bump(self):
         old, new, updates = self.call(config_path="simple.toml", bump="minor")
@@ -164,9 +177,9 @@ UNRELATED_STRING = "apple"
 
 class TestUtils(unittest.TestCase):
     def test_is_release(self):
-        self.assertTrue(utils.is_release(semver.parse_version_info("1.2.3")))
-        self.assertFalse(utils.is_release(semver.parse_version_info("1.2.3-RC.1")))
-        self.assertFalse(utils.is_release(semver.parse_version_info("1.2.3+abc")))
+        self.assertTrue(utils.is_release(semver.Version.parse("1.2.3")))
+        self.assertFalse(utils.is_release(semver.Version.parse("1.2.3-RC.1")))
+        self.assertFalse(utils.is_release(semver.Version.parse("1.2.3+abc")))
 
     def test_sigfig_max(self):
         self.assertEqual("minor", utils.max_sigfig(["minor", "patch"]))
@@ -188,20 +201,19 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(
             "minor",
             utils.semver_diff(
-                semver.parse_version_info("1.2.3"), semver.parse_version_info("1.3.5")
+                semver.Version.parse("1.2.3"), semver.Version.parse("1.3.5")
             ),
         )
         self.assertEqual(
             "patch",
             utils.semver_diff(
-                semver.parse_version_info("1.2.3"),
-                semver.parse_version_info("1.2.4-RC.1"),
+                semver.Version.parse("1.2.3"), semver.Version.parse("1.2.4-RC.1")
             ),
         )
         self.assertEqual(
             None,
             utils.semver_diff(
-                semver.parse_version_info("1.2.3"), semver.parse_version_info("1.2.3")
+                semver.Version.parse("1.2.3"), semver.Version.parse("1.2.3")
             ),
         )
 
@@ -215,14 +227,10 @@ class TestNewSemVerLogic(unittest.TestCase):
         auto_version_tool.load_config(os.path.join(test_dir, "example.toml"))
 
     def check(self, previous, current, bumps, expect):
-        previous = semver.parse_version_info(previous) if previous else None
+        previous = semver.Version.parse(previous) if previous else None
         self.assertEqual(
             expect,
-            str(
-                utils.make_new_semver(
-                    semver.parse_version_info(current), previous, bumps
-                )
-            ),
+            str(utils.make_new_semver(semver.Version.parse(current), previous, bumps)),
         )
 
     def test_release_bump(self):
@@ -289,7 +297,7 @@ class TestVCSTags(unittest.TestCase):
             {
                 "VERSION": bumped,
                 "VERSION_AGAIN": bumped,
-                "STRICT_VERSION": semver.finalize_version(bumped),
+                "STRICT_VERSION": str(semver.Version.parse(bumped).finalize_version()),
             },
         )
 
@@ -303,7 +311,7 @@ class TestVCSTags(unittest.TestCase):
             {
                 "VERSION": bumped,
                 "VERSION_AGAIN": bumped,
-                "STRICT_VERSION": semver.finalize_version(bumped),
+                "STRICT_VERSION": str(semver.Version.parse(bumped).finalize_version()),
             },
         )
 
@@ -315,7 +323,7 @@ class TestVCSTags(unittest.TestCase):
             {
                 "VERSION": bumped,
                 "VERSION_AGAIN": bumped,
-                "STRICT_VERSION": semver.finalize_version(bumped),
+                "STRICT_VERSION": str(semver.Version.parse(bumped).finalize_version()),
             },
         )
 
@@ -327,7 +335,7 @@ class TestVCSTags(unittest.TestCase):
             {
                 "VERSION": bumped,
                 "VERSION_AGAIN": bumped,
-                "STRICT_VERSION": semver.finalize_version(bumped),
+                "STRICT_VERSION": str(semver.Version.parse(bumped).finalize_version()),
             },
         )
 
@@ -348,12 +356,12 @@ class TestVCSTags(unittest.TestCase):
             {
                 "VERSION": bumped,
                 "VERSION_AGAIN": bumped,
-                "STRICT_VERSION": semver.finalize_version(bumped),
+                "STRICT_VERSION": str(semver.Version.parse(bumped).finalize_version()),
             },
         )
         version = auto_version_tool.get_dvcs_repo_latest_version_semver()
         self.assertEqual(
-            dict(version._asdict()),
+            dict(version.to_dict()),
             dict(major=5, minor=0, patch=0, build=None, prerelease="dev.1"),
         )
 

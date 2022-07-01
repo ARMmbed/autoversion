@@ -23,7 +23,9 @@ class ReplacementHandler(object):
         """
         original = match.string
         key = match.group(Constants.KEY_GROUP)
-        replacement = self.params[key]  # if there's nothing in the lookup, raise KeyError
+        replacement = self.params[
+            key
+        ]  # if there's nothing in the lookup, raise KeyError
         start, end = match.span(Constants.VALUE_GROUP)
         if start < 0:
             # when there's a match but zero-length for the value group, we insert it at the end

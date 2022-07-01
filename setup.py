@@ -1,6 +1,7 @@
 import os
-from setuptools import setup
+
 from setuptools import find_packages
+from setuptools import setup
 
 repository_dir = os.path.dirname(__file__)
 

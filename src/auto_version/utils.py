@@ -16,7 +16,7 @@ def from_text_or_none(text):
     """
     if text is not None:
         try:
-            return semver.parse_version_info(text)
+            return semver.Version.parse(text)
         except ValueError:
             _LOG.debug("version string is not semver-compatible: %r", text)
             pass
@@ -46,8 +46,12 @@ def get_semver_from_source(data):
         # we didn't have enough components
         pass
 
-    versions = [potential for potential in potentials if from_text_or_none(potential)]
-    release_versions = {semver.finalize_version(version) for version in versions}
+    actual_versions = []
+    for potential in potentials:
+        version = from_text_or_none(potential)
+        if version:
+            actual_versions.append(version)
+    release_versions = {version.finalize_version() for version in actual_versions}
 
     if len(release_versions) > 1:
         raise ValueError(
@@ -55,15 +59,15 @@ def get_semver_from_source(data):
             % (release_versions, known)
         )
 
-    if not versions:
+    if not actual_versions:
         _LOG.debug("key pairs found: \n%r", known)
         raise ValueError("could not find existing semver")
 
     result = None
-    if versions:
-        result = versions[0]
+    if actual_versions:
+        result = actual_versions[0]
     _LOG.info("latest version found in source: %r", result)
-    return semver.parse_version_info(result)
+    return result
 
 
 def get_token_args(sig_fig):
@@ -84,7 +88,9 @@ def max_sigfig(sigfigs):
 
 def min_sigfig(sigfigs):
     """Given a list of significant figures, return the smallest"""
-    for sig_fig in reversed(SemVerSigFig):  # iterate sig figs in order of least significance
+    for sig_fig in reversed(
+        SemVerSigFig
+    ):  # iterate sig figs in order of least significance
         if sig_fig in sigfigs:
             return sig_fig
 
@@ -120,13 +126,15 @@ def make_new_semver(current_semver, last_release_semver, all_triggers, **overrid
     :param overrides: explicit values for some or all of the sigfigs
     :return:
     """
-    version_string = str(current_semver)
+    proposed_version = current_semver
 
     # if the current version isn't a full release
     if not is_release(current_semver) and last_release_semver:
         # we check to see how important the changes are
         # in the triggers, compared to the changes made between the current version and previous release
-        if sigfig_gt(max_sigfig(all_triggers), semver_diff(current_semver, last_release_semver)):
+        if sigfig_gt(
+            max_sigfig(all_triggers), semver_diff(current_semver, last_release_semver)
+        ):
             # here, the changes are more significant than the original RC bump, so we re-bump
             pass
         else:
@@ -142,23 +150,22 @@ def make_new_semver(current_semver, last_release_semver, all_triggers, **overrid
 
     if bump_sigfig:
         # perform an increment using the most-significant trigger
-        version_string = getattr(semver, "bump_" + bump_sigfig)(
-            str(current_semver), **get_token_args(bump_sigfig)
+        proposed_version = getattr(current_semver, "bump_" + bump_sigfig)(
+            **get_token_args(bump_sigfig)
         )
 
         if sigfig_gt(bump_sigfig, SemVerSigFig.prerelease):
             # if we *didnt* increment sub-patch already, then we should do so
             # this provides the "devmode template" as previously
             # and ensures a simple 'bump' doesn't look like a full release
-            version_string = semver.bump_prerelease(
-                version_string, token=config.PRERELEASE_TOKEN
+            proposed_version = proposed_version.bump_prerelease(
+                token=config.PRERELEASE_TOKEN
             )
 
     # perform any explicit setting of sigfigs
-    version_info = semver.parse_version_info(version_string)
     for k, v in overrides.items():
         token_args = get_token_args(k)
         prefix = list(token_args.values()).pop() + "." if token_args else ""
-        setattr(version_info, "_" + k, prefix + str(v))
+        setattr(proposed_version, "_" + k, prefix + str(v))
 
-    return version_info
+    return proposed_version
